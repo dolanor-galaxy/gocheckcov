@@ -24,9 +24,6 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "cov-analyzer",
 	Short: "analyzes coverage",
-	//Run: func(cmd *cobra.Command, args []string) {
-	//  // Do Stuff Here
-	//},
 }
 
 func Execute() {

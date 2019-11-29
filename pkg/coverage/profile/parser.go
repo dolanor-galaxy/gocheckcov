@@ -29,20 +29,6 @@ type Parser struct {
 	Profile  *cover.Profile
 }
 
-func PrintReport(functions []statements.Function) {
-	for _, function := range functions {
-		executedStatementsCount := 0
-		for _, s := range function.Statements {
-			if s.ExecutedCount > 0 {
-				executedStatementsCount++
-			}
-		}
-		v := (float64(executedStatementsCount) / float64(len(function.Statements))) * 10000
-		percent := (math.Floor(v) / 10000) * 100
-		log.Printf("function %v has %v statements of which %v were executed for a percent of %v", function.Name, len(function.Statements), executedStatementsCount, percent)
-	}
-}
-
 func (p Parser) RecordStatementCoverage(functions []statements.Function) []statements.Function {
 	for fIdx, function := range functions {
 		statements := function.Statements

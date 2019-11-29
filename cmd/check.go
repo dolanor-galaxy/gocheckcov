@@ -35,7 +35,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// checkCmd represents the check command
 var (
 	configFile     string
 	ProfileFile    string
@@ -46,9 +45,6 @@ var (
 	checkCmd       = &cobra.Command{
 		Use:   "check",
 		Short: "Check whether pkg coverage meets specified minimum",
-		//  Long: `A longer description that spans multiple lines and likely contains examples
-		//and usage of using your command. For example:
-
 		Run: func(cmd *cobra.Command, args []string) {
 			var srcPath string
 			if len(args) > 0 {
@@ -70,16 +66,16 @@ var (
 					log.Printf("could not get working directory %v", err)
 				}
 			}
-			profilePath := ProfileFile
-			fset := token.NewFileSet()
+
 			dir := srcPath
-			//dir := "/Users/colewippern/Code/src/github.com/GoogleContainerTools/kaniko/pkg"
 			projectFiles, err := filesForPath(dir)
 			if err != nil {
 				log.Printf("could not retrieve project files from path %v %v", dir, err)
 				os.Exit(1)
 			}
 
+			profilePath := ProfileFile
+			fset := token.NewFileSet()
 			packageToFunctions := mapPackagesToFunctions(profilePath, projectFiles, fset)
 
 			var cfContent []byte
