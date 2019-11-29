@@ -20,6 +20,7 @@ import (
 	"go/token"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -40,6 +41,7 @@ var (
 	ProfileFile    string
 	printFunctions bool
 	minCov         float64
+	cliOutput      cliLogger
 	checkCmd       = &cobra.Command{
 		Use:   "check",
 		Short: "Check whether pkg coverage meets specified minimum",
@@ -115,7 +117,7 @@ func filesForPath(dir string) ([]string, error) {
 	files := make([]string, 0)
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", path, err)
+			fmt.Printf("could not access path %q: %v\n", path, err)
 			return err
 		}
 
@@ -151,23 +153,30 @@ func init() {
 		log.Print(err)
 		os.Exit(1)
 	}
-	// Here you will define your flags and configuration settings.
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// checkCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// checkCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	cliOutput = cliLogger{}
 }
 
 func verifyCoverage(pkg config.ConfigPackage, cov float64) {
 	if pkg.MinCoveragePercentage > cov {
-		log.Printf("coverage %v%% for package %v did not meet minimum %v%%", cov, pkg.Name, pkg.MinCoveragePercentage)
+		cliOutput.Printf("coverage %v%% for package %v did not meet minimum %v%%", cov, pkg.Name, pkg.MinCoveragePercentage)
 		os.Exit(1)
 	}
-	log.Printf("coverage %v%% for package %v meets minimum %v%%", cov, pkg.Name, pkg.MinCoveragePercentage)
+	cliOutput.Printf("coverage %v%% for package %v meets minimum %v%%", cov, pkg.Name, pkg.MinCoveragePercentage)
+}
+
+func printReport(functions []statements.Function) {
+	for _, function := range functions {
+		executedStatementsCount := 0
+		for _, s := range function.Statements {
+			if s.ExecutedCount > 0 {
+				executedStatementsCount++
+			}
+		}
+		v := (float64(executedStatementsCount) / float64(len(function.Statements))) * 10000
+		percent := (math.Floor(v) / 10000) * 100
+		cliOutput.Printf("function %v has %v statements of which %v were executed for a percent of %v", function.Name, len(function.Statements), executedStatementsCount, percent)
+	}
 }
 
 func reportCoverage(packageToFunctions map[string][]statements.Function, printFunctions bool, configFile []byte) map[string]float64 {
@@ -181,10 +190,10 @@ func reportCoverage(packageToFunctions map[string][]statements.Function, printFu
 			os.Exit(1)
 		}
 		if printFunctions {
-			profile.PrintReport(functions)
+			printReport(functions)
 		}
 
-		log.Printf("coverage for pkg %v is %v%% (%v/%v statements)", pkg, cov.CoveragePercent, cov.ExecutedCount, cov.StatementCount)
+		cliOutput.Printf("pkg %v coverage is %v%% (%v/%v statements)\n", pkg, cov.CoveragePercent, cov.ExecutedCount, cov.StatementCount)
 	}
 	for pkg := range packageToFunctions {
 		cov, ok := pc.Coverage(pkg)
@@ -215,4 +224,10 @@ func reportCoverage(packageToFunctions map[string][]statements.Function, printFu
 		verifyCoverage(cfgPkg, cov.CoveragePercent)
 	}
 	return pkgToCoverage
+}
+
+type cliLogger struct{}
+
+func (l cliLogger) Printf(fmtString string, args ...interface{}) {
+	fmt.Println(fmt.Sprintf(fmtString, args...))
 }
