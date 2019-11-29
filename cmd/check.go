@@ -198,12 +198,13 @@ func filesForPath(dir string) ([]string, error) {
 	return files, err
 }
 
-func verifyCoverage(pkg config.ConfigPackage, cov float64) {
+func verifyCoverage(pkg config.ConfigPackage, cov float64) bool {
 	if pkg.MinCoveragePercentage > cov {
 		cliOutput.Printf("coverage %v%% for package %v did not meet minimum %v%%", cov, pkg.Name, pkg.MinCoveragePercentage)
-		os.Exit(1)
+		return false
 	}
 	cliOutput.Printf("coverage %v%% for package %v meets minimum %v%%", cov, pkg.Name, pkg.MinCoveragePercentage)
+	return true
 }
 
 func printReport(functions []statements.Function) {
@@ -236,6 +237,7 @@ func reportCoverage(packageToFunctions map[string][]statements.Function, printFu
 
 		cliOutput.Printf("pkg %v coverage is %v%% (%v/%v statements)\n", pkg, cov.CoveragePercent, cov.ExecutedCount, cov.StatementCount)
 	}
+	fail := false
 	for pkg := range packageToFunctions {
 		cov, ok := pc.Coverage(pkg)
 		if !ok {
@@ -262,7 +264,12 @@ func reportCoverage(packageToFunctions map[string][]statements.Function, printFu
 			}
 		}
 
-		verifyCoverage(cfgPkg, cov.CoveragePercent)
+		if ok := verifyCoverage(cfgPkg, cov.CoveragePercent); !ok {
+			fail = true
+		}
+	}
+	if fail {
+		os.Exit(1)
 	}
 	return pkgToCoverage
 }
