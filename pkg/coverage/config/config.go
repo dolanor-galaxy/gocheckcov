@@ -18,6 +18,15 @@ type ConfigFile struct {
 	Packages []ConfigPackage `yaml:"packages"`
 }
 
+func (c ConfigFile) GetPackage(pkg string) (ConfigPackage, bool) {
+	for _, p := range c.Packages {
+		if p.Name == pkg {
+			return p, true
+		}
+	}
+	return ConfigPackage{}, false
+}
+
 type ConfigPackage struct {
 	Name                  string  `yaml:"name"`
 	MinCoveragePercentage float64 `yaml:"min_coverage_percentage"`

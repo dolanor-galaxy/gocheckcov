@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"go/token"
 	"io/ioutil"
 	"log"
 	"os"
@@ -36,9 +37,13 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		filePath := ProfileFile
-		packageToFunctions := analyzer.MapPackagesToFunctions(filePath)
+		profilePath := ProfileFile
+		fset := token.NewFileSet()
+		dir := "/Users/colewippern/Code/src/github.com/GoogleContainerTools/kaniko/pkg"
+		projectFiles := filesForPath(dir)
+		packageToFunctions := mapPackagesToFunctions(profilePath, projectFiles, fset)
 		pc := analyzer.NewPackageCoverages(packageToFunctions)
+
 		configFile := config.ConfigFile{}
 		for pkg := range packageToFunctions {
 			cov, ok := pc.Coverage(pkg)

@@ -16,6 +16,7 @@ package analyzer
 
 import (
 	"fmt"
+	"go/ast"
 	"go/build"
 	"go/parser"
 	"go/token"
@@ -23,48 +24,43 @@ import (
 	"log"
 	"math"
 	"path/filepath"
-	"strings"
 
-	profile "github.com/cvgw/cov-analyzer/pkg/coverage/profile"
 	"github.com/cvgw/cov-analyzer/pkg/coverage/statements"
 	"golang.org/x/tools/cover"
 )
 
-func MapPackagesToFunctions(filePath string) map[string][]statements.Function {
-	profiles, err := cover.ParseProfiles(filePath)
-	if err != nil {
-		log.Fatal(fmt.Errorf("could not parse profiles from %v %v", filePath, err))
-	}
-
-	goPath := build.Default.GOPATH
-	packageToFunctions := make(map[string][]statements.Function)
-
+func NodesFromProfiles(profiles []*cover.Profile, fset *token.FileSet) (map[string]*ast.File, error) {
+	filePaths := make([]string, 0)
 	for _, prof := range profiles {
-		pFilePath := filepath.Join(goPath, "src", prof.FileName)
-
-		src, err := ioutil.ReadFile(pFilePath)
-		if err != nil {
-			log.Fatal(fmt.Errorf("could not read file from profile %v %v", pFilePath, err))
-		}
-
-		fset := token.NewFileSet()
-		f, err := parser.ParseFile(fset, pFilePath, src, 0)
-		if err != nil {
-			panic(err)
-		}
-
-		p := profile.Parser{FilePath: pFilePath, Fset: fset, Profile: prof}
-		functions, err := statements.CollectFunctions(f, fset)
-		if err != nil {
-			panic(err)
-		}
-		functions = p.RecordStatementCoverage(functions)
-
-		pkg := strings.TrimPrefix(filepath.Dir(pFilePath), filepath.Join(goPath, "src"))
-		pkg = strings.TrimPrefix(pkg, "/")
-		packageToFunctions[pkg] = append(packageToFunctions[pkg], functions...)
+		filePaths = append(filePaths, prof.FileName)
 	}
-	return packageToFunctions
+
+	filePathToNode := make(map[string]*ast.File)
+	for _, filePath := range filePaths {
+		node, err := NodeFromFilePath(filePath, fset)
+		if err != nil {
+			return nil, err
+		}
+		filePathToNode[filePath] = node
+	}
+
+	return filePathToNode, nil
+}
+
+func NodeFromFilePath(filePath string, fset *token.FileSet) (*ast.File, error) {
+	goPath := build.Default.GOPATH
+	pFilePath := filepath.Join(goPath, "src", filePath)
+
+	src, err := ioutil.ReadFile(pFilePath)
+	if err != nil {
+		log.Fatal(fmt.Errorf("could not read file from profile %v %v", pFilePath, err))
+	}
+
+	f, err := parser.ParseFile(fset, pFilePath, src, 0)
+	if err != nil {
+		panic(err)
+	}
+	return f, nil
 }
 
 type PackageCoverages struct {
@@ -96,7 +92,12 @@ func NewPackageCoverages(packagesToFunctions map[string][]statements.Function) *
 				}
 			}
 		}
-		covPer := float64(math.Floor((float64(executedCount)/float64(statementCount))*10000) / 100)
+		var covPer float64
+		if executedCount == 0 && statementCount == 0 {
+			covPer = 100
+		} else {
+			covPer = float64(math.Floor((float64(executedCount)/float64(statementCount))*10000) / 100)
+		}
 		c := coverage{StatementCount: statementCount, ExecutedCount: executedCount, CoveragePercent: covPer}
 		pkgToCoverage[pkg] = c
 	}
