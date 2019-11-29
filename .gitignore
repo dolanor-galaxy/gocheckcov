@@ -3,3 +3,4 @@ cp.out
 cov-analyzer
 config.yaml
 profile.out
+*.swp

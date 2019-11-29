@@ -39,6 +39,7 @@ var (
 	configFile     string
 	ProfileFile    string
 	printFunctions bool
+	minCov         float64
 	checkCmd       = &cobra.Command{
 		Use:   "check",
 		Short: "Check whether pkg coverage meets specified minimum",
@@ -56,12 +57,15 @@ var (
 			}
 
 			packageToFunctions := mapPackagesToFunctions(profilePath, projectFiles, fset)
-			cfContent, err := ioutil.ReadFile(configFile)
-			if err != nil {
-				log.Printf("could not read config file %v %v", configFile, err)
-				os.Exit(1)
-			}
 
+			var cfContent []byte
+			if configFile != "" {
+				cfContent, err = ioutil.ReadFile(configFile)
+				if err != nil {
+					log.Printf("could not read config file %v %v", configFile, err)
+					os.Exit(1)
+				}
+			}
 			reportCoverage(packageToFunctions, printFunctions, cfContent)
 		},
 	}
@@ -135,16 +139,15 @@ func filesForPath(dir string) ([]string, error) {
 func init() {
 	checkCmd.AddCommand(checkInitCmd)
 	rootCmd.AddCommand(checkCmd)
+
 	checkCmd.Flags().BoolVar(&printFunctions, "print-functions", false, "print coverage for individual functions")
+
+	checkCmd.Flags().Float64VarP(&minCov, "minimum-coverage", "m", 0, "minimum coverage percentage to enforce for all packages (defaults to 0)")
+
 	checkCmd.Flags().StringVarP(&configFile, "config-file", "c", "", "path to configuration file")
+
 	checkCmd.PersistentFlags().StringVarP(&ProfileFile, "profile-file", "p", "", "path to coverage profile file")
-
-	if err := checkCmd.MarkFlagRequired("config-file"); err != nil {
-		log.Print(err)
-		os.Exit(1)
-	}
-
-	if err := checkCmd.MarkFlagRequired("profile-file"); err != nil {
+	if err := checkCmd.MarkPersistentFlagRequired("profile-file"); err != nil {
 		log.Print(err)
 		os.Exit(1)
 	}
@@ -190,15 +193,25 @@ func reportCoverage(packageToFunctions map[string][]statements.Function, printFu
 			os.Exit(1)
 		}
 
-		cfg := config.ConfigFile{}
-		if err := yaml.Unmarshal([]byte(configFile), &cfg); err != nil {
-			log.Printf("could not unmarshal yaml for config file %v", err)
-			os.Exit(1)
+		var cfgPkg config.ConfigPackage
+		if len(configFile) != 0 {
+			cfg := config.ConfigFile{}
+			if err := yaml.Unmarshal([]byte(configFile), &cfg); err != nil {
+				log.Printf("could not unmarshal yaml for config file %v", err)
+				os.Exit(1)
+			}
+			var ok bool
+			cfgPkg, ok = cfg.GetPackage(pkg)
+			if !ok {
+				continue
+			}
+		} else {
+			cfgPkg = config.ConfigPackage{
+				Name:                  pkg,
+				MinCoveragePercentage: minCov,
+			}
 		}
-		cfgPkg, ok := cfg.GetPackage(pkg)
-		if !ok {
-			continue
-		}
+
 		verifyCoverage(cfgPkg, cov.CoveragePercent)
 	}
 	return pkgToCoverage
