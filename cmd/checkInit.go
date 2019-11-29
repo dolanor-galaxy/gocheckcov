@@ -29,13 +29,8 @@ import (
 // checkInitCmd represents the checkInit command
 var checkInitCmd = &cobra.Command{
 	Use:   "init",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Create a new config file using current coverage",
+	Long:  `Create a new configuration file for cov-analyzer which lists all of packages in the specified path and sets the minimum converage percentage for each to the current coverage percentage for that package`,
 	Run: func(cmd *cobra.Command, args []string) {
 		profilePath := ProfileFile
 		fset := token.NewFileSet()

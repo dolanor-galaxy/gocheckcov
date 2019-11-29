@@ -93,6 +93,9 @@ func (sc *stmtCollector) collect(s ast.Stmt, fset *token.FileSet) error {
 	statements := []ast.Stmt{}
 	switch s := s.(type) {
 	case *ast.BlockStmt:
+		if s == nil {
+			return fmt.Errorf("something went wrong, block statement was nil")
+		}
 		statements = s.List
 	case *ast.CaseClause:
 		statements = s.Body

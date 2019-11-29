@@ -42,6 +42,7 @@ var (
 	printFunctions bool
 	minCov         float64
 	cliOutput      cliLogger
+	skipDirs       dirsToIgnore
 	checkCmd       = &cobra.Command{
 		Use:   "check",
 		Short: "Check whether pkg coverage meets specified minimum",
@@ -49,9 +50,30 @@ var (
 		//and usage of using your command. For example:
 
 		Run: func(cmd *cobra.Command, args []string) {
+			var srcPath string
+			if len(args) > 0 {
+				srcPath = args[0]
+				log.Printf("srcPath %v", srcPath)
+				absSrcPath, err := filepath.Abs(srcPath)
+				if err != nil {
+					log.Printf("could not get absolute path from %v %v", srcPath, err)
+				} else {
+					log.Printf("absSrcPath %v", absSrcPath)
+					srcPath = absSrcPath
+				}
+			}
+
+			if srcPath == "" {
+				var err error
+				srcPath, err = os.Getwd()
+				if err != nil {
+					log.Printf("could not get working directory %v", err)
+				}
+			}
 			profilePath := ProfileFile
 			fset := token.NewFileSet()
-			dir := "/Users/colewippern/Code/src/github.com/GoogleContainerTools/kaniko/pkg"
+			dir := srcPath
+			//dir := "/Users/colewippern/Code/src/github.com/GoogleContainerTools/kaniko/pkg"
 			projectFiles, err := filesForPath(dir)
 			if err != nil {
 				log.Printf("could not retrieve project files from path %v %v", dir, err)
@@ -72,6 +94,27 @@ var (
 		},
 	}
 )
+
+func init() {
+	rootCmd.AddCommand(checkCmd)
+
+	checkCmd.Flags().BoolVar(&printFunctions, "print-functions", false, "print coverage for individual functions")
+
+	checkCmd.Flags().Float64VarP(&minCov, "minimum-coverage", "m", 0, "minimum coverage percentage to enforce for all packages (defaults to 0)")
+
+	checkCmd.Flags().StringVarP(&configFile, "config-file", "c", "", "path to configuration file")
+
+	checkCmd.PersistentFlags().StringVarP(&ProfileFile, "profile-file", "p", "", "path to coverage profile file")
+	if err := checkCmd.MarkPersistentFlagRequired("profile-file"); err != nil {
+		log.Print(err)
+		os.Exit(1)
+	}
+
+	cliOutput = cliLogger{}
+	skipDirs = []string{
+		"vendor",
+	}
+}
 
 func mapPackagesToFunctions(filePath string, projectFiles []string, fset *token.FileSet) map[string][]statements.Function {
 	goPath := build.Default.GOPATH
@@ -96,7 +139,8 @@ func mapPackagesToFunctions(filePath string, projectFiles []string, fset *token.
 		}
 		functions, err := statements.CollectFunctions(node, fset)
 		if err != nil {
-			panic(err)
+			log.Printf("could not collect functions for filepath %v %v", filePath, err)
+			os.Exit(1)
 		}
 
 		pkg := strings.TrimPrefix(filePath, fmt.Sprintf("%s/", filepath.Join(goPath, "src")))
@@ -112,6 +156,18 @@ func mapPackagesToFunctions(filePath string, projectFiles []string, fset *token.
 	return packageToFunctions
 }
 
+type dirsToIgnore []string
+
+func (d dirsToIgnore) Includes(dir string) bool {
+	for _, ignore := range d {
+		if ignore == dir {
+			return true
+		}
+	}
+
+	return false
+}
+
 func filesForPath(dir string) ([]string, error) {
 	goPath := build.Default.GOPATH
 	files := make([]string, 0)
@@ -119,6 +175,10 @@ func filesForPath(dir string) ([]string, error) {
 		if err != nil {
 			fmt.Printf("could not access path %q: %v\n", path, err)
 			return err
+		}
+
+		if info.IsDir() && skipDirs.Includes(info.Name()) {
+			return filepath.SkipDir
 		}
 
 		if info.Mode().IsRegular() {
@@ -136,25 +196,6 @@ func filesForPath(dir string) ([]string, error) {
 		return nil, err
 	}
 	return files, err
-}
-
-func init() {
-	checkCmd.AddCommand(checkInitCmd)
-	rootCmd.AddCommand(checkCmd)
-
-	checkCmd.Flags().BoolVar(&printFunctions, "print-functions", false, "print coverage for individual functions")
-
-	checkCmd.Flags().Float64VarP(&minCov, "minimum-coverage", "m", 0, "minimum coverage percentage to enforce for all packages (defaults to 0)")
-
-	checkCmd.Flags().StringVarP(&configFile, "config-file", "c", "", "path to configuration file")
-
-	checkCmd.PersistentFlags().StringVarP(&ProfileFile, "profile-file", "p", "", "path to coverage profile file")
-	if err := checkCmd.MarkPersistentFlagRequired("profile-file"); err != nil {
-		log.Print(err)
-		os.Exit(1)
-	}
-
-	cliOutput = cliLogger{}
 }
 
 func verifyCoverage(pkg config.ConfigPackage, cov float64) {
