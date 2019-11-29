@@ -198,6 +198,8 @@ func (sc *stmtCollector) handleIfStmtElse(s *ast.IfStmt, fset *token.FileSet) er
 	default:
 		return fmt.Errorf("unexpected node type for if statement")
 	}
-	sc.collect(s.Else, fset)
+	if err := sc.collect(s.Else, fset); err != nil {
+		return err
+	}
 	return nil
 }

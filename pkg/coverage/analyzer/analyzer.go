@@ -64,8 +64,7 @@ func NodeFromFilePath(filePath string, fset *token.FileSet) (*ast.File, error) {
 }
 
 type PackageCoverages struct {
-	coverages           map[string]coverage
-	packagesToFunctions map[string][]statements.Function
+	coverages map[string]coverage
 }
 
 type coverage struct {

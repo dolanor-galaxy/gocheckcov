@@ -49,7 +49,12 @@ var (
 			profilePath := ProfileFile
 			fset := token.NewFileSet()
 			dir := "/Users/colewippern/Code/src/github.com/GoogleContainerTools/kaniko/pkg"
-			projectFiles := filesForPath(dir)
+			projectFiles, err := filesForPath(dir)
+			if err != nil {
+				log.Printf("could not retrieve project files from path %v %v", dir, err)
+				os.Exit(1)
+			}
+
 			packageToFunctions := mapPackagesToFunctions(profilePath, projectFiles, fset)
 			cfContent, err := ioutil.ReadFile(configFile)
 			if err != nil {
@@ -76,7 +81,7 @@ func mapPackagesToFunctions(filePath string, projectFiles []string, fset *token.
 		filePathToProfileMap[prof.FileName] = prof
 	}
 
-	packageToFunctions := make(map[string][]statements.Function, 0)
+	packageToFunctions := make(map[string][]statements.Function)
 	for _, filePath := range projectFiles {
 		node, err := analyzer.NodeFromFilePath(filePath, fset)
 		if err != nil {
@@ -101,10 +106,10 @@ func mapPackagesToFunctions(filePath string, projectFiles []string, fset *token.
 	return packageToFunctions
 }
 
-func filesForPath(dir string) []string {
+func filesForPath(dir string) ([]string, error) {
 	goPath := build.Default.GOPATH
 	files := make([]string, 0)
-	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", path, err)
 			return err
@@ -121,7 +126,10 @@ func filesForPath(dir string) []string {
 		}
 		return nil
 	})
-	return files
+	if err != nil {
+		return nil, err
+	}
+	return files, err
 }
 
 func init() {
@@ -130,8 +138,16 @@ func init() {
 	checkCmd.Flags().BoolVar(&printFunctions, "print-functions", false, "print coverage for individual functions")
 	checkCmd.Flags().StringVarP(&configFile, "config-file", "c", "", "path to configuration file")
 	checkCmd.PersistentFlags().StringVarP(&ProfileFile, "profile-file", "p", "", "path to coverage profile file")
-	checkCmd.MarkFlagRequired("config-file")
-	checkCmd.MarkFlagRequired("profile-file")
+
+	if err := checkCmd.MarkFlagRequired("config-file"); err != nil {
+		log.Print(err)
+		os.Exit(1)
+	}
+
+	if err := checkCmd.MarkFlagRequired("profile-file"); err != nil {
+		log.Print(err)
+		os.Exit(1)
+	}
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command

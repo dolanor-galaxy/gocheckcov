@@ -40,7 +40,12 @@ to quickly create a Cobra application.`,
 		profilePath := ProfileFile
 		fset := token.NewFileSet()
 		dir := "/Users/colewippern/Code/src/github.com/GoogleContainerTools/kaniko/pkg"
-		projectFiles := filesForPath(dir)
+		projectFiles, err := filesForPath(dir)
+		if err != nil {
+			log.Printf("could not retrieve files for path %v %v", dir, err)
+			os.Exit(1)
+		}
+
 		packageToFunctions := mapPackagesToFunctions(profilePath, projectFiles, fset)
 		pc := analyzer.NewPackageCoverages(packageToFunctions)
 
