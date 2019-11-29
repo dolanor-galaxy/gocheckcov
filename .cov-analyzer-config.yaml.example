@@ -1,0 +1,3 @@
+packages:
+- name: github.com/GoogleContainerTools/kaniko/pkg/executor
+  min_coverage_percentage: 80
