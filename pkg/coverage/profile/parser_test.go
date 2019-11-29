@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/cvgw/cov-analyzer/pkg/coverage/statements"
+	"github.com/cvgw/gocheckcov/pkg/coverage/statements"
 	. "github.com/onsi/gomega"
 	"golang.org/x/tools/cover"
 )

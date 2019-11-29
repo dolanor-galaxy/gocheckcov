@@ -1,6 +1,6 @@
 .envrc
 cp.out
-cov-analyzer
+gocheckcov
 config.yaml
 profile.out
 *.swp

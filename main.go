@@ -1,6 +1,6 @@
 package main
 
-import "github.com/cvgw/cov-analyzer/cmd"
+import "github.com/cvgw/gocheckcov/cmd"
 
 func main() {
 	cmd.Execute()

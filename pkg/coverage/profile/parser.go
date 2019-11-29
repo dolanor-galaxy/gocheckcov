@@ -23,7 +23,7 @@ import (
 	"log"
 	"path/filepath"
 
-	"github.com/cvgw/cov-analyzer/pkg/coverage/statements"
+	"github.com/cvgw/gocheckcov/pkg/coverage/statements"
 	"github.com/pkg/errors"
 	"golang.org/x/tools/cover"
 )

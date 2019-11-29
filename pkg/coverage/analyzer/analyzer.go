@@ -17,7 +17,7 @@ package analyzer
 import (
 	"math"
 
-	"github.com/cvgw/cov-analyzer/pkg/coverage/statements"
+	"github.com/cvgw/gocheckcov/pkg/coverage/statements"
 )
 
 type PackageCoverages struct {

@@ -25,9 +25,9 @@ const version = "v0.0.0"
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "print the cov-analyzer version",
+	Short: "print the gocheckcov version",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("cov-analyzer %v\n", version)
+		fmt.Printf("gocheckcov %v\n", version)
 	},
 }
 

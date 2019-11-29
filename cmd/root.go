@@ -23,7 +23,7 @@ import (
 
 var verbose bool
 var rootCmd = &cobra.Command{
-	Use:   "cov-analyzer",
+	Use:   "gocheckcov",
 	Short: "analyzes coverage",
 }
 

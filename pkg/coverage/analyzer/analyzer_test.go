@@ -3,7 +3,7 @@ package analyzer
 import (
 	"testing"
 
-	"github.com/cvgw/cov-analyzer/pkg/coverage/statements"
+	"github.com/cvgw/gocheckcov/pkg/coverage/statements"
 	. "github.com/onsi/gomega"
 )
 
