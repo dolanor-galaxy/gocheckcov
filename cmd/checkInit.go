@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/cvgw/cov-analyzer/pkg/coverage/analyzer"
 	"github.com/cvgw/cov-analyzer/pkg/coverage/config"
@@ -34,8 +35,11 @@ var checkInitCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		profilePath := ProfileFile
 		fset := token.NewFileSet()
-		dir := "/Users/colewippern/Code/src/github.com/GoogleContainerTools/kaniko/pkg"
-		projectFiles, err := filesForPath(dir)
+
+		srcPath := setSrcPath(args)
+		dir := srcPath
+		ignoreDirs := strings.Split(skipDirs, ",")
+		projectFiles, err := filesForPath(dir, ignoreDirs)
 		if err != nil {
 			log.Printf("could not retrieve files for path %v %v", dir, err)
 			os.Exit(1)
