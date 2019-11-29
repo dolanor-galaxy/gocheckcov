@@ -95,6 +95,7 @@ func init() {
 
 func mapPackagesToFunctions(filePath string, projectFiles []string, fset *token.FileSet) map[string][]statements.Function {
 	goPath := build.Default.GOPATH
+	goSrc := filepath.Join(goPath, "src")
 
 	profiles, err := cover.ParseProfiles(filePath)
 	if err != nil {
@@ -109,7 +110,7 @@ func mapPackagesToFunctions(filePath string, projectFiles []string, fset *token.
 
 	packageToFunctions := make(map[string][]statements.Function)
 	for _, filePath := range projectFiles {
-		node, err := profile.NodeFromFilePath(filePath, fset)
+		node, err := profile.NodeFromFilePath(filePath, goSrc, fset)
 		if err != nil {
 			log.Printf("could not retrieve node from filepath %v", err)
 			os.Exit(1)

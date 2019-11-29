@@ -12,6 +12,7 @@ import (
 
 func Test_NodesFromProfiles(t *testing.T) {
 	g := NewGomegaWithT(t)
+
 	file, err := ioutil.TempFile("", "profile.test")
 	if err != nil {
 		t.Errorf("could not create temp file")
