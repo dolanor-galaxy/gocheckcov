@@ -16,10 +16,10 @@ package cmd
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"go/build"
 	"go/token"
 	"io/ioutil"
-	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -46,6 +46,10 @@ var (
 		Use:   "check",
 		Short: "Check whether pkg coverage meets specified minimum",
 		Run: func(cmd *cobra.Command, args []string) {
+			if verbose {
+				log.SetLevel(log.DebugLevel)
+			}
+
 			srcPath := setSrcPath(args)
 
 			ignoreDirs := strings.Split(skipDirs, ",")
@@ -115,12 +119,13 @@ func mapPackagesToFunctions(filePath string, projectFiles []string, fset *token.
 			log.Printf("could not retrieve node from filepath %v", err)
 			os.Exit(1)
 		}
+
 		functions, err := statements.CollectFunctions(node, fset)
 		if err != nil {
 			log.Printf("could not collect functions for filepath %v %v", filePath, err)
 			os.Exit(1)
 		}
-
+		log.Debugf("functions for file %v %v", filePath, functions)
 		pkg := strings.TrimPrefix(filePath, fmt.Sprintf("%s/", filepath.Join(goPath, "src")))
 		pkg = filepath.Dir(pkg)
 
@@ -129,8 +134,11 @@ func mapPackagesToFunctions(filePath string, projectFiles []string, fset *token.
 			functions = p.RecordStatementCoverage(functions)
 		}
 
-		packageToFunctions[pkg] = functions
+		packageToFunctions[pkg] = append(packageToFunctions[pkg], functions...)
 	}
+
+	log.Debugf("map of packages to functions %v", packageToFunctions)
+
 	return packageToFunctions
 }
 
@@ -170,9 +178,9 @@ func filesForPath(dir string, ignoreDirs dirsToIgnore) ([]string, error) {
 		}
 		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
+
+	log.Debugf("files for %v %v", dir, files)
+
 	return files, err
 }
 
@@ -262,12 +270,12 @@ func setSrcPath(args []string) string {
 	var srcPath string
 	if len(args) > 0 {
 		srcPath = args[0]
-		log.Printf("srcPath %v", srcPath)
+		log.Debugf("srcPath %v", srcPath)
 		absSrcPath, err := filepath.Abs(srcPath)
 		if err != nil {
-			log.Printf("could not get absolute path from %v %v", srcPath, err)
+			log.Debugf("could not get absolute path from %v %v", srcPath, err)
 		} else {
-			log.Printf("absSrcPath %v", absSrcPath)
+			log.Debugf("absSrcPath %v", absSrcPath)
 			srcPath = absSrcPath
 		}
 	}
@@ -275,7 +283,7 @@ func setSrcPath(args []string) string {
 		var err error
 		srcPath, err = os.Getwd()
 		if err != nil {
-			log.Printf("could not get working directory %v", err)
+			log.Debugf("could not get working directory %v", err)
 		}
 	}
 	return srcPath

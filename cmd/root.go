@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var verbose bool
 var rootCmd = &cobra.Command{
 	Use:   "cov-analyzer",
 	Short: "analyzes coverage",
@@ -31,4 +32,8 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+func init() {
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "turn on verbose logging")
 }

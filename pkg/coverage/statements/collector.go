@@ -16,6 +16,7 @@ package statements
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"go/ast"
 	"go/token"
 )
@@ -52,6 +53,9 @@ func (v *visitor) Visit(n ast.Node) ast.Visitor {
 			return nil
 		}
 		stmts := sc.statements
+
+		log.Debugf("%v statements %v", f.Name, stmts)
+
 		convertedStmts := make([]Statement, 0, len(stmts))
 		for _, stmnt := range stmts {
 			start := v.fset.Position(stmnt.Pos())
@@ -82,6 +86,9 @@ func CollectFunctions(f *ast.File, fset *token.FileSet) ([]Function, error) {
 	if v.err != nil {
 		return nil, v.err
 	}
+
+	log.Debugf("visitor functions %v", v.functions)
+
 	return v.functions, nil
 }
 
