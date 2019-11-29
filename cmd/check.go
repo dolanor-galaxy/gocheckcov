@@ -109,7 +109,7 @@ func mapPackagesToFunctions(filePath string, projectFiles []string, fset *token.
 
 	packageToFunctions := make(map[string][]statements.Function)
 	for _, filePath := range projectFiles {
-		node, err := analyzer.NodeFromFilePath(filePath, fset)
+		node, err := profile.NodeFromFilePath(filePath, fset)
 		if err != nil {
 			log.Printf("could not retrieve node from filepath %v", err)
 			os.Exit(1)

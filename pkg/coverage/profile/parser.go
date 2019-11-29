@@ -12,14 +12,59 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package Profile
+package profile
 
 import (
+	"fmt"
+	"go/ast"
+	"go/parser"
 	"go/token"
+	"io/ioutil"
+	"log"
+	"path/filepath"
 
 	"github.com/cvgw/cov-analyzer/pkg/coverage/statements"
+	"github.com/pkg/errors"
 	"golang.org/x/tools/cover"
 )
+
+func NodesFromProfiles(goSrcPath string, profiles []*cover.Profile, fset *token.FileSet) (map[string]*ast.File, error) {
+	filePaths := make([]string, 0)
+	for _, prof := range profiles {
+		if prof.FileName == "" {
+			return nil, fmt.Errorf("profile has a blank file name %v", prof)
+		}
+		filePaths = append(filePaths, prof.FileName)
+	}
+
+	filePathToNode := make(map[string]*ast.File)
+	for _, filePath := range filePaths {
+		node, err := NodeFromFilePath(filePath, goSrcPath, fset)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("could not get node from file path %v", filePath))
+		}
+		filePathToNode[filePath] = node
+	}
+
+	return filePathToNode, nil
+}
+
+func NodeFromFilePath(filePath, goSrcPath string, fset *token.FileSet) (*ast.File, error) {
+	pFilePath := filepath.Join(goSrcPath, filePath)
+
+	src, err := ioutil.ReadFile(pFilePath)
+	if err != nil {
+		log.Printf("could not read file from profile %v %v", pFilePath, err)
+		return nil, err
+	}
+
+	f, err := parser.ParseFile(fset, pFilePath, src, 0)
+	if err != nil {
+		log.Printf("could not parse file %v %v", pFilePath, err)
+		return nil, err
+	}
+	return f, nil
+}
 
 type Parser struct {
 	Fset     *token.FileSet

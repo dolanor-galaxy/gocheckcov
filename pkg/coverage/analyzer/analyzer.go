@@ -15,53 +15,10 @@
 package analyzer
 
 import (
-	"fmt"
-	"go/ast"
-	"go/build"
-	"go/parser"
-	"go/token"
-	"io/ioutil"
-	"log"
 	"math"
-	"path/filepath"
 
 	"github.com/cvgw/cov-analyzer/pkg/coverage/statements"
-	"golang.org/x/tools/cover"
 )
-
-func NodesFromProfiles(profiles []*cover.Profile, fset *token.FileSet) (map[string]*ast.File, error) {
-	filePaths := make([]string, 0)
-	for _, prof := range profiles {
-		filePaths = append(filePaths, prof.FileName)
-	}
-
-	filePathToNode := make(map[string]*ast.File)
-	for _, filePath := range filePaths {
-		node, err := NodeFromFilePath(filePath, fset)
-		if err != nil {
-			return nil, err
-		}
-		filePathToNode[filePath] = node
-	}
-
-	return filePathToNode, nil
-}
-
-func NodeFromFilePath(filePath string, fset *token.FileSet) (*ast.File, error) {
-	goPath := build.Default.GOPATH
-	pFilePath := filepath.Join(goPath, "src", filePath)
-
-	src, err := ioutil.ReadFile(pFilePath)
-	if err != nil {
-		log.Fatal(fmt.Errorf("could not read file from profile %v %v", pFilePath, err))
-	}
-
-	f, err := parser.ParseFile(fset, pFilePath, src, 0)
-	if err != nil {
-		panic(err)
-	}
-	return f, nil
-}
 
 type PackageCoverages struct {
 	coverages map[string]coverage
