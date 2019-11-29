@@ -1,2 +1,4 @@
 .envrc
 cp.out
+cov-analyzer
+config.yaml
