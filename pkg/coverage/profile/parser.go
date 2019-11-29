@@ -16,8 +16,6 @@ package Profile
 
 import (
 	"go/token"
-	"log"
-	"math"
 
 	"github.com/cvgw/cov-analyzer/pkg/coverage/statements"
 	"golang.org/x/tools/cover"
