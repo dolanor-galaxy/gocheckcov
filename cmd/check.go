@@ -72,7 +72,10 @@ var (
 				PrintFunctions: printFunctions,
 				MinCov:         minCov,
 			}
-			v.ReportCoverage(packageToFunctions, printFunctions, cfContent)
+			if _, err := v.ReportCoverage(packageToFunctions, printFunctions, cfContent); err != nil {
+				log.Print(err)
+				os.Exit(1)
+			}
 		},
 	}
 )

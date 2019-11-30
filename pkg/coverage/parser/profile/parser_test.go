@@ -20,6 +20,8 @@ import (
 	"testing"
 
 	"github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser"
+	"github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser/functions"
+	"github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser/statements"
 	. "github.com/onsi/gomega"
 	"golang.org/x/tools/cover"
 )
@@ -102,7 +104,6 @@ func Meow(x, y int) bool {
 				g.Expect(err).To(BeNil())
 				g.Expect(res).To(HaveLen(1))
 			}
-			//g.Expect(res).To(HaveKey(file.Name()))
 		})
 	}
 }
@@ -180,6 +181,115 @@ meow
 				g.Expect(err).To(BeNil())
 				g.Expect(res).ToNot(BeNil())
 			}
+		})
+	}
+}
+
+func Test_Parser_RecordFunctionCoverage(t *testing.T) {
+	type testcase struct {
+		description     string
+		functions       []functions.Function
+		expectCoverages []FunctionCoverage
+		profile         *cover.Profile
+	}
+
+	testCases := []testcase{
+		{
+			description: "empty list of functions, blank file path, and nil profile",
+		},
+		{
+			description: "list of functions, blank file path, and nil profile",
+			functions: []functions.Function{
+				{
+					Statements: []statements.Statement{
+						statements.Statement{},
+					},
+				},
+			},
+			expectCoverages: []FunctionCoverage{
+				FunctionCoverage{
+					StatementCount: 1,
+					Function: functions.Function{
+						Statements: []statements.Statement{
+							statements.Statement{},
+						},
+					},
+				},
+			},
+		},
+		{
+			description: "list of functions, blank file path, and non-matching profile",
+			profile:     &cover.Profile{},
+			functions: []functions.Function{
+				{
+					Statements: []statements.Statement{
+						statements.Statement{},
+					},
+				},
+			},
+			expectCoverages: []FunctionCoverage{
+				FunctionCoverage{
+					StatementCount: 1,
+					Function: functions.Function{
+						Statements: []statements.Statement{
+							statements.Statement{},
+						},
+					},
+				},
+			},
+		},
+		{
+			description: "list of functions, blank file path, and matching profile",
+			profile: &cover.Profile{
+				Blocks: []cover.ProfileBlock{
+					cover.ProfileBlock{
+						StartLine: 3,
+						StartCol:  1,
+						EndLine:   5,
+						EndCol:    1,
+						Count:     4,
+						NumStmt:   10,
+					},
+				},
+			},
+			functions: []functions.Function{
+				{
+					StartLine: 2,
+					StartCol:  1,
+					EndLine:   10,
+					EndCol:    1,
+					Statements: []statements.Statement{
+						statements.Statement{},
+					},
+				},
+			},
+			expectCoverages: []FunctionCoverage{
+				FunctionCoverage{
+					StatementCount: 10,
+					CoveredCount:   10,
+					Function: functions.Function{
+						StartLine: 2,
+						StartCol:  1,
+						EndLine:   10,
+						EndCol:    1,
+						Statements: []statements.Statement{
+							statements.Statement{},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.description, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			fset := token.NewFileSet()
+			p := Parser{Fset: fset, Profile: tc.profile}
+			coverages := p.RecordFunctionCoverage(tc.functions)
+			g.Expect(coverages).To(HaveLen(len(tc.functions)))
+			g.Expect(coverages).To(ConsistOf(tc.expectCoverages))
 		})
 	}
 }
