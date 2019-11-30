@@ -47,10 +47,20 @@ jobs:
         # Install golangci-lint
         curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.21.0
 
-    - name: Make default
+    - name: License, lint, test
       env:
         GOPATH: /home/runner/work/gocheckcov/go
       run: |
         export PATH=$PATH:$GOPATH/bin
+        make license lint
+        go test -race -covermode atomic -coverprofile=profile.cov ./...
 
-        make
+
+    - name: Send coverage
+      env:
+        GOPATH: /home/runner/work/gocheckcov/go
+        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        export PATH=$PATH:$GOPATH/bin
+        GO111MODULE=off go get github.com/mattn/goveralls
+        $(go env GOPATH)/bin/goveralls -coverprofile=profile.cov -service=github
