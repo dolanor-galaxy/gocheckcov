@@ -15,24 +15,17 @@
 package cmd
 
 import (
-	"fmt"
-	log "github.com/sirupsen/logrus"
-	"go/build"
 	"go/token"
 	"io/ioutil"
-	"math"
 	"os"
-	"path/filepath"
-	"regexp"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/cvgw/gocheckcov/pkg/coverage/analyzer"
-	"github.com/cvgw/gocheckcov/pkg/coverage/config"
-	profile "github.com/cvgw/gocheckcov/pkg/coverage/profile"
-	"github.com/cvgw/gocheckcov/pkg/coverage/statements"
+	"github.com/cvgw/gocheckcov/pkg/coverage/files"
+	"github.com/cvgw/gocheckcov/pkg/coverage/reporter"
 	"github.com/spf13/cobra"
-	"golang.org/x/tools/cover"
-	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -40,7 +33,6 @@ var (
 	ProfileFile    string
 	printFunctions bool
 	minCov         float64
-	cliOutput      cliLogger
 	skipDirs       string
 	checkCmd       = &cobra.Command{
 		Use:   "check",
@@ -50,11 +42,11 @@ var (
 				log.SetLevel(log.DebugLevel)
 			}
 
-			srcPath := setSrcPath(args)
+			srcPath := files.SetSrcPath(args)
 
 			ignoreDirs := strings.Split(skipDirs, ",")
 			dir := srcPath
-			projectFiles, err := filesForPath(dir, ignoreDirs)
+			projectFiles, err := files.FilesForPath(dir, ignoreDirs)
 			if err != nil {
 				log.Printf("could not retrieve project files from path %v %v", dir, err)
 				os.Exit(1)
@@ -62,7 +54,7 @@ var (
 
 			profilePath := ProfileFile
 			fset := token.NewFileSet()
-			packageToFunctions := mapPackagesToFunctions(profilePath, projectFiles, fset)
+			packageToFunctions := analyzer.MapPackagesToFunctions(profilePath, projectFiles, fset)
 
 			var cfContent []byte
 			if configFile != "" {
@@ -72,7 +64,12 @@ var (
 					os.Exit(1)
 				}
 			}
-			reportCoverage(packageToFunctions, printFunctions, cfContent)
+			v := reporter.Verifier{
+				Out:            reporter.CliLogger{},
+				PrintFunctions: printFunctions,
+				MinCov:         minCov,
+			}
+			v.ReportCoverage(packageToFunctions, printFunctions, cfContent)
 		},
 	}
 )
@@ -112,313 +109,4 @@ func init() {
 		log.Print(err)
 		os.Exit(1)
 	}
-
-	cliOutput = cliLogger{}
-}
-
-func mapPackagesToFunctions(
-	filePath string,
-	projectFiles []string,
-	fset *token.FileSet,
-) map[string][]statements.Function {
-	goPath := build.Default.GOPATH
-	goSrc := filepath.Join(goPath, "src")
-
-	profiles, err := cover.ParseProfiles(filePath)
-	if err != nil {
-		log.Printf("could not parse profiles from %v %v", filePath, err)
-		os.Exit(1)
-	}
-
-	filePathToProfileMap := make(map[string]*cover.Profile)
-	for _, prof := range profiles {
-		filePathToProfileMap[prof.FileName] = prof
-	}
-
-	packageToFunctions := make(map[string][]statements.Function)
-
-	for _, filePath := range projectFiles {
-		node, err := profile.NodeFromFilePath(filePath, goSrc, fset)
-		if err != nil {
-			log.Printf("could not retrieve node from filepath %v", err)
-			os.Exit(1)
-		}
-
-		functions, err := statements.CollectFunctions(node, fset)
-		if err != nil {
-			log.Printf("could not collect functions for filepath %v %v", filePath, err)
-			os.Exit(1)
-		}
-
-		log.Debugf("functions for file %v %v", filePath, functions)
-		pkg := strings.TrimPrefix(filePath, fmt.Sprintf("%s/", filepath.Join(goPath, "src")))
-		pkg = filepath.Dir(pkg)
-
-		if prof, ok := filePathToProfileMap[filePath]; ok {
-			p := profile.Parser{FilePath: filePath, Fset: fset, Profile: prof}
-			functions = p.RecordStatementCoverage(functions)
-		}
-
-		packageToFunctions[pkg] = append(packageToFunctions[pkg], functions...)
-	}
-
-	log.Debugf("map of packages to functions %v", packageToFunctions)
-
-	return packageToFunctions
-}
-
-type dirsToIgnore []string
-
-func (d dirsToIgnore) Includes(dir string) bool {
-	for _, ignore := range d {
-		if ignore == dir {
-			return true
-		}
-	}
-
-	return false
-}
-
-func filesForPath(dir string, ignoreDirs dirsToIgnore) ([]string, error) {
-	base := filepath.Base(dir)
-	if base == "..." {
-		dir = filepath.Dir(dir)
-	}
-
-	fi, err := os.Stat(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	if !fi.IsDir() {
-		return nil, fmt.Errorf("path must be a directory")
-	}
-
-	if base == "..." {
-		return recusiveFilesForPath(dir, ignoreDirs)
-	}
-
-	return filesForDir(dir)
-}
-
-func recusiveFilesForPath(dir string, ignoreDirs dirsToIgnore) ([]string, error) {
-	goPath := build.Default.GOPATH
-	files := make([]string, 0)
-
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			fmt.Printf("could not access path %q: %v\n", path, err)
-			return err
-		}
-
-		if info.IsDir() && ignoreDirs.Includes(info.Name()) {
-			return filepath.SkipDir
-		}
-
-		if info.Mode().IsRegular() {
-			if regexp.MustCompile(".go$").Match([]byte(path)) {
-				if regexp.MustCompile("_test.go$").Match([]byte(path)) {
-					return nil
-				}
-				path = strings.TrimPrefix(path, fmt.Sprintf("%v/", filepath.Join(goPath, "src")))
-				files = append(files, path)
-			}
-		}
-		return nil
-	})
-
-	log.Debugf("files for %v %v", dir, files)
-
-	return files, err
-}
-
-func filesForDir(dir string) ([]string, error) {
-	goPath := build.Default.GOPATH
-
-	fileInfos, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	files := make([]string, 0)
-
-	for _, fi := range fileInfos {
-		if fi.IsDir() {
-			continue
-		}
-
-		if fi.Mode().IsRegular() {
-			if regexp.MustCompile(".go$").Match([]byte(fi.Name())) {
-				if regexp.MustCompile("_test.go$").Match([]byte(fi.Name())) {
-					continue
-				}
-
-				path := filepath.Join(dir, fi.Name())
-				path = strings.TrimPrefix(path, fmt.Sprintf("%v/", filepath.Join(goPath, "src")))
-				files = append(files, path)
-			}
-		}
-	}
-
-	log.Debugf("files for %v %v", dir, files)
-
-	return files, err
-}
-
-func verifyCoverage(pkg config.ConfigPackage, cov float64) bool {
-	if pkg.MinCoveragePercentage > cov {
-		cliOutput.Printf(
-			"coverage %v%% for package %v did not meet minimum %v%%",
-			cov,
-			pkg.Name,
-			pkg.MinCoveragePercentage,
-		)
-
-		return false
-	}
-
-	cliOutput.Printf(
-		"coverage %v%% for package %v meets minimum %v%%",
-		cov,
-		pkg.Name,
-		pkg.MinCoveragePercentage,
-	)
-
-	return true
-}
-
-func printReport(functions []statements.Function) {
-	for _, function := range functions {
-		executedStatementsCount := 0
-
-		for _, s := range function.Statements {
-			if s.ExecutedCount > 0 {
-				executedStatementsCount++
-			}
-		}
-
-		v := (float64(executedStatementsCount) / float64(len(function.Statements))) * 10000
-		percent := (math.Floor(v) / 10000) * 100
-		cliOutput.Printf(
-			"function %v has %v statements of which %v were executed for a percent of %v",
-			function.Name,
-			len(function.Statements),
-			executedStatementsCount,
-			percent,
-		)
-	}
-}
-
-func reportPackageCoverages(
-	packageToFunctions map[string][]statements.Function,
-	pc *analyzer.PackageCoverages,
-	printFunctions bool,
-) {
-	for pkg := range packageToFunctions {
-		functions := packageToFunctions[pkg]
-		cov, ok := pc.Coverage(pkg)
-
-		if !ok {
-			log.Printf("could not get coverage for package %v", pkg)
-			os.Exit(1)
-		}
-
-		if printFunctions {
-			printReport(functions)
-		}
-
-		cliOutput.Printf(
-			"pkg %v coverage is %v%% (%v/%v statements)\n",
-			pkg,
-			cov.CoveragePercent,
-			cov.ExecutedCount,
-			cov.StatementCount,
-		)
-	}
-}
-
-func reportCoverage(
-	packageToFunctions map[string][]statements.Function,
-	printFunctions bool,
-	configFile []byte,
-) map[string]float64 {
-	pkgToCoverage := make(map[string]float64)
-	pc := analyzer.NewPackageCoverages(packageToFunctions)
-
-	reportPackageCoverages(packageToFunctions, pc, printFunctions)
-
-	fail := false
-
-	for pkg := range packageToFunctions {
-		cov, ok := pc.Coverage(pkg)
-		if !ok {
-			log.Printf("could not get coverage for package %v", pkg)
-			os.Exit(1)
-		}
-
-		var cfgPkg config.ConfigPackage
-
-		if len(configFile) != 0 {
-			cfg := config.ConfigFile{}
-			if err := yaml.Unmarshal(configFile, &cfg); err != nil {
-				log.Printf("could not unmarshal yaml for config file %v", err)
-				os.Exit(1)
-			}
-
-			var ok bool
-			cfgPkg, ok = cfg.GetPackage(pkg)
-
-			if !ok {
-				continue
-			}
-		} else {
-			cfgPkg = config.ConfigPackage{
-				Name:                  pkg,
-				MinCoveragePercentage: minCov,
-			}
-		}
-
-		if ok := verifyCoverage(cfgPkg, cov.CoveragePercent); !ok {
-			fail = true
-		}
-	}
-
-	if fail {
-		os.Exit(1)
-	}
-
-	return pkgToCoverage
-}
-
-type cliLogger struct{}
-
-func (l cliLogger) Printf(fmtString string, args ...interface{}) {
-	fmt.Println(fmt.Sprintf(fmtString, args...))
-}
-
-func setSrcPath(args []string) string {
-	var srcPath string
-	if len(args) > 0 {
-		srcPath = args[0]
-		log.Debugf("srcPath %v", srcPath)
-		absSrcPath, err := filepath.Abs(srcPath)
-
-		if err != nil {
-			log.Debugf("could not get absolute path from %v %v", srcPath, err)
-		} else {
-			log.Debugf("absSrcPath %v", absSrcPath)
-			srcPath = absSrcPath
-		}
-	}
-
-	if srcPath == "" {
-		var err error
-		srcPath, err = os.Getwd()
-
-		if err != nil {
-			log.Debugf("could not get working directory %v", err)
-		}
-	}
-
-	return srcPath
 }

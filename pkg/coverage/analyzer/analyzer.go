@@ -15,9 +15,17 @@
 package analyzer
 
 import (
-	"math"
-
+	"fmt"
+	"github.com/cvgw/gocheckcov/pkg/coverage/profile"
 	"github.com/cvgw/gocheckcov/pkg/coverage/statements"
+	log "github.com/sirupsen/logrus"
+	"go/build"
+	"go/token"
+	"golang.org/x/tools/cover"
+	"math"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 type PackageCoverages struct {
@@ -67,4 +75,55 @@ func NewPackageCoverages(packagesToFunctions map[string][]statements.Function) *
 	return &PackageCoverages{
 		coverages: pkgToCoverage,
 	}
+}
+
+func MapPackagesToFunctions(
+	filePath string,
+	projectFiles []string,
+	fset *token.FileSet,
+) map[string][]statements.Function {
+	goPath := build.Default.GOPATH
+	goSrc := filepath.Join(goPath, "src")
+
+	profiles, err := cover.ParseProfiles(filePath)
+	if err != nil {
+		log.Printf("could not parse profiles from %v %v", filePath, err)
+		os.Exit(1)
+	}
+
+	filePathToProfileMap := make(map[string]*cover.Profile)
+	for _, prof := range profiles {
+		filePathToProfileMap[prof.FileName] = prof
+	}
+
+	packageToFunctions := make(map[string][]statements.Function)
+
+	for _, filePath := range projectFiles {
+		node, err := profile.NodeFromFilePath(filePath, goSrc, fset)
+		if err != nil {
+			log.Printf("could not retrieve node from filepath %v", err)
+			os.Exit(1)
+		}
+
+		functions, err := statements.CollectFunctions(node, fset)
+		if err != nil {
+			log.Printf("could not collect functions for filepath %v %v", filePath, err)
+			os.Exit(1)
+		}
+
+		log.Debugf("functions for file %v %v", filePath, functions)
+		pkg := strings.TrimPrefix(filePath, fmt.Sprintf("%s/", filepath.Join(goPath, "src")))
+		pkg = filepath.Dir(pkg)
+
+		if prof, ok := filePathToProfileMap[filePath]; ok {
+			p := profile.Parser{FilePath: filePath, Fset: fset, Profile: prof}
+			functions = p.RecordStatementCoverage(functions)
+		}
+
+		packageToFunctions[pkg] = append(packageToFunctions[pkg], functions...)
+	}
+
+	log.Debugf("map of packages to functions %v", packageToFunctions)
+
+	return packageToFunctions
 }

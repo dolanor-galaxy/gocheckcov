@@ -23,6 +23,7 @@ import (
 
 	"github.com/cvgw/gocheckcov/pkg/coverage/analyzer"
 	"github.com/cvgw/gocheckcov/pkg/coverage/config"
+	"github.com/cvgw/gocheckcov/pkg/coverage/files"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
@@ -37,16 +38,16 @@ var checkInitCmd = &cobra.Command{
 		profilePath := ProfileFile
 		fset := token.NewFileSet()
 
-		srcPath := setSrcPath(args)
+		srcPath := files.SetSrcPath(args)
 		dir := srcPath
 		ignoreDirs := strings.Split(skipDirs, ",")
-		projectFiles, err := filesForPath(dir, ignoreDirs)
+		projectFiles, err := files.FilesForPath(dir, ignoreDirs)
 		if err != nil {
 			log.Printf("could not retrieve files for path %v %v", dir, err)
 			os.Exit(1)
 		}
 
-		packageToFunctions := mapPackagesToFunctions(profilePath, projectFiles, fset)
+		packageToFunctions := analyzer.MapPackagesToFunctions(profilePath, projectFiles, fset)
 		pc := analyzer.NewPackageCoverages(packageToFunctions)
 
 		configFile := config.ConfigFile{}
