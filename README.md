@@ -46,8 +46,10 @@ gocheckcov help
 Specify minimum coverage for each package via a configuration file
 ```
 #.gocheckcov-config.yaml
+min_coverage_percentage: 25
 packages:
 - name: github.com/bar/foo/pkg/baz
+  # this overrides the global val of min_coverage_percentage for only this package
   mininum_coverage_percentage: 66.6
 ```
 
