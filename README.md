@@ -1,6 +1,13 @@
 # gocheckcov
 ![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/cvgw/gocheckcov/Go/master?style=plastic)
 
+* [Status](#status)
+* [Description](#description)
+* [Usage](#usage)
+  * [Configuration](#configuration)
+* [Development](#development)
+* [Contributing](#contributing)
+
 ## Status
 Alpha
 
@@ -30,3 +37,9 @@ packages:
 - name: github.com/bar/foo/pkg/baz
   mininum_coverage_percentage: 66.6
 ```
+
+## Development
+gocheckcov uses `dep` for dependency management and `golangci-lint` for linting. See the [development guide](./DEVELOPMENT.md) for more info.
+
+## Contributing
+Contributors are welcome and appreciated. Please read the [contributing guide](./CONTRIBUTING.md) for more info.
