@@ -15,6 +15,7 @@
 package files
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -51,6 +52,77 @@ func Test_SetSrcPath(t *testing.T) {
 
 			actual := SetSrcPath(tc.args)
 			g.Expect(actual).To(Equal(tc.expected))
+		})
+	}
+}
+
+func Test_FilesForPath(t *testing.T) {
+	dir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		t.Errorf("couldnt create temp dir %v", err)
+		t.FailNow()
+	}
+
+	err = os.Mkdir(filepath.Join(dir, "meow"), 0777)
+	if err != nil {
+		t.Errorf("could not create temp dir %v", err)
+		t.FailNow()
+	}
+
+	err = ioutil.WriteFile(filepath.Join(dir, "meow", "foo.go"), []byte(`meow`), 0644)
+	if err != nil {
+		t.Errorf("could not create temp file %v", err)
+		t.FailNow()
+	}
+
+	err = ioutil.WriteFile(filepath.Join(dir, "bar.go"), []byte(`meow`), 0644)
+	if err != nil {
+		t.Errorf("could not create temp file %v", err)
+		t.FailNow()
+	}
+
+	type testcase struct {
+		description       string
+		expectErr         bool
+		dir               string
+		ignoreDirs        []string
+		expectedFileCount int
+	}
+
+	testCases := []testcase{
+		{
+			description: "bad directory path",
+			dir:         "foobar",
+			expectErr:   true,
+		},
+		{
+			description: "bad directory path, is file",
+			dir:         filepath.Join(dir, "bar.go"),
+			expectErr:   true,
+		},
+		{
+			description:       "valid directory path, no recursion",
+			dir:               dir,
+			expectedFileCount: 1,
+		},
+		{
+			description:       "valid directory path, with recursion",
+			dir:               filepath.Join(dir, "..."),
+			expectedFileCount: 2,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.description, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			files, err := FilesForPath(tc.dir, tc.ignoreDirs)
+			if tc.expectErr {
+				g.Expect(err).ToNot(BeNil())
+			} else {
+				g.Expect(err).To(BeNil())
+				g.Expect(files).To(HaveLen(tc.expectedFileCount))
+			}
 		})
 	}
 }
