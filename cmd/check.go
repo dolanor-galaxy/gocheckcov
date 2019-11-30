@@ -15,9 +15,11 @@
 package cmd
 
 import (
+	"go/build"
 	"go/token"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -54,7 +56,8 @@ var (
 
 			profilePath := ProfileFile
 			fset := token.NewFileSet()
-			packageToFunctions := analyzer.MapPackagesToFunctions(profilePath, projectFiles, fset)
+			goSrc := filepath.Join(build.Default.GOPATH, "src")
+			packageToFunctions := analyzer.MapPackagesToFunctions(profilePath, projectFiles, fset, goSrc)
 
 			var cfContent []byte
 			if configFile != "" {

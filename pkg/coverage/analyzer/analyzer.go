@@ -16,16 +16,16 @@ package analyzer
 
 import (
 	"fmt"
-	"github.com/cvgw/gocheckcov/pkg/coverage/profile"
-	"github.com/cvgw/gocheckcov/pkg/coverage/statements"
-	log "github.com/sirupsen/logrus"
-	"go/build"
 	"go/token"
-	"golang.org/x/tools/cover"
 	"math"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/cvgw/gocheckcov/pkg/coverage/profile"
+	"github.com/cvgw/gocheckcov/pkg/coverage/statements"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/tools/cover"
 )
 
 type PackageCoverages struct {
@@ -81,10 +81,8 @@ func MapPackagesToFunctions(
 	filePath string,
 	projectFiles []string,
 	fset *token.FileSet,
+	goSrc string,
 ) map[string][]statements.Function {
-	goPath := build.Default.GOPATH
-	goSrc := filepath.Join(goPath, "src")
-
 	profiles, err := cover.ParseProfiles(filePath)
 	if err != nil {
 		log.Printf("could not parse profiles from %v %v", filePath, err)
@@ -112,7 +110,7 @@ func MapPackagesToFunctions(
 		}
 
 		log.Debugf("functions for file %v %v", filePath, functions)
-		pkg := strings.TrimPrefix(filePath, fmt.Sprintf("%s/", filepath.Join(goPath, "src")))
+		pkg := strings.TrimPrefix(filePath, fmt.Sprintf("%s/", goSrc))
 		pkg = filepath.Dir(pkg)
 
 		if prof, ok := filePathToProfileMap[filePath]; ok {
