@@ -19,7 +19,7 @@ import (
 
 	"github.com/cvgw/gocheckcov/mocks/coverage/mock_reporter"
 	"github.com/cvgw/gocheckcov/pkg/coverage/config"
-	"github.com/cvgw/gocheckcov/pkg/coverage/statements"
+	"github.com/cvgw/gocheckcov/pkg/coverage/parser/profile"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
 )
@@ -81,7 +81,7 @@ func Test_Verifier_VerifyCoverage(t *testing.T) {
 func Test_Verifier_PrintReport(t *testing.T) {
 	type testcase struct {
 		verifier  *Verifier
-		functions []statements.Function
+		functions []profile.FunctionCoverage
 	}
 
 	type tcFn func(*gomock.Controller) testcase
@@ -92,7 +92,7 @@ func Test_Verifier_PrintReport(t *testing.T) {
 
 			return testcase{
 				verifier:  &Verifier{Out: mockLogger},
-				functions: []statements.Function{},
+				functions: []profile.FunctionCoverage{},
 			}
 		},
 		"one empty function": func(ctrl *gomock.Controller) testcase {
@@ -101,8 +101,8 @@ func Test_Verifier_PrintReport(t *testing.T) {
 
 			return testcase{
 				verifier: &Verifier{Out: mockLogger},
-				functions: []statements.Function{
-					statements.Function{},
+				functions: []profile.FunctionCoverage{
+					profile.FunctionCoverage{},
 				},
 			}
 		},
@@ -112,8 +112,8 @@ func Test_Verifier_PrintReport(t *testing.T) {
 
 			return testcase{
 				verifier: &Verifier{Out: mockLogger},
-				functions: []statements.Function{
-					statements.Function{Statements: []statements.Statement{statements.Statement{ExecutedCount: 1}}},
+				functions: []profile.FunctionCoverage{
+					{CoveredCount: 1, StatementCount: 1},
 				},
 			}
 		},

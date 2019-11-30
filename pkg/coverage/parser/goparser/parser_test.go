@@ -12,27 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package statements
+package goparser
 
 import (
-	"go/parser"
 	"go/token"
 	"io/ioutil"
+	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/gomega"
 )
 
-func Test_CollectFunctions(t *testing.T) {
+func Test_NodeFromFilePath(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	file, err := ioutil.TempFile("", "profile.test")
+	dir, err := ioutil.TempDir("", "test")
 	if err != nil {
-		t.Errorf("could not create temp file")
+		t.Errorf("could not create temp dir")
 		t.FailNow()
 	}
 
-	profileFileContent := `
+	srcContent := `
 package foo
 
 func Meow(x, y int) bool {
@@ -42,7 +42,8 @@ func Meow(x, y int) bool {
 	return false
 }
 `
-	err = ioutil.WriteFile(file.Name(), []byte(profileFileContent), 0644)
+	srcPath := filepath.Join(dir, "src.go")
+	err = ioutil.WriteFile(srcPath, []byte(srcContent), 0644)
 
 	if err != nil {
 		t.Errorf("could not write to temp file %v", err)
@@ -50,15 +51,7 @@ func Meow(x, y int) bool {
 	}
 
 	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, file.Name(), []byte(profileFileContent), 0)
-
-	if err != nil {
-		t.Errorf("could not create ast for file %v %v", file.Name(), err)
-		t.FailNow()
-	}
-
-	funcs, err := CollectFunctions(f, fset)
+	astFile, err := NodeFromFilePath(srcPath, "", fset)
 	g.Expect(err).To(BeNil())
-	g.Expect(funcs).ToNot(BeNil())
-	g.Expect(funcs).To(HaveLen(1))
+	g.Expect(astFile).ToNot(BeNil())
 }

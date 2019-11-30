@@ -22,8 +22,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cvgw/gocheckcov/pkg/coverage/profile"
-	"github.com/cvgw/gocheckcov/pkg/coverage/statements"
+	"github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser"
+	"github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser/functions"
+	"github.com/cvgw/gocheckcov/pkg/coverage/parser/profile"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/tools/cover"
 )
@@ -33,8 +34,8 @@ type PackageCoverages struct {
 }
 
 type coverage struct {
-	StatementCount  int
-	ExecutedCount   int
+	StatementCount  int64
+	ExecutedCount   int64
 	CoveragePercent float64
 }
 
@@ -43,21 +44,17 @@ func (p *PackageCoverages) Coverage(pkg string) (coverage, bool) {
 	return cov, ok
 }
 
-func NewPackageCoverages(packagesToFunctions map[string][]statements.Function) *PackageCoverages {
+func NewPackageCoverages(packagesToFunctions map[string][]profile.FunctionCoverage) *PackageCoverages {
 	pkgToCoverage := make(map[string]coverage)
 
 	for pkg, functions := range packagesToFunctions {
-		statementCount := 0
-		executedCount := 0
+		var statementCount int64
+
+		var executedCount int64
 
 		for _, function := range functions {
-			for _, stmt := range function.Statements {
-				statementCount++
-
-				if stmt.ExecutedCount > 0 {
-					executedCount++
-				}
-			}
+			statementCount += function.StatementCount
+			executedCount += function.CoveredCount
 		}
 
 		var covPer float64
@@ -82,7 +79,7 @@ func MapPackagesToFunctions(
 	projectFiles []string,
 	fset *token.FileSet,
 	goSrc string,
-) map[string][]statements.Function {
+) map[string][]profile.FunctionCoverage {
 	profiles, err := cover.ParseProfiles(filePath)
 	if err != nil {
 		log.Printf("could not parse profiles from %v %v", filePath, err)
@@ -94,16 +91,16 @@ func MapPackagesToFunctions(
 		filePathToProfileMap[prof.FileName] = prof
 	}
 
-	packageToFunctions := make(map[string][]statements.Function)
+	packageToFunctions := make(map[string][]profile.FunctionCoverage)
 
 	for _, filePath := range projectFiles {
-		node, err := profile.NodeFromFilePath(filePath, goSrc, fset)
+		node, err := goparser.NodeFromFilePath(filePath, goSrc, fset)
 		if err != nil {
 			log.Printf("could not retrieve node from filepath %v", err)
 			os.Exit(1)
 		}
 
-		functions, err := statements.CollectFunctions(node, fset)
+		functions, err := functions.CollectFunctions(node, fset)
 		if err != nil {
 			log.Printf("could not collect functions for filepath %v %v", filePath, err)
 			os.Exit(1)
@@ -113,12 +110,17 @@ func MapPackagesToFunctions(
 		pkg := strings.TrimPrefix(filePath, fmt.Sprintf("%s/", goSrc))
 		pkg = filepath.Dir(pkg)
 
+		var funcCoverages []profile.FunctionCoverage
+
+		p := profile.Parser{FilePath: filePath, Fset: fset}
+
 		if prof, ok := filePathToProfileMap[filePath]; ok {
-			p := profile.Parser{FilePath: filePath, Fset: fset, Profile: prof}
-			functions = p.RecordStatementCoverage(functions)
+			p.Profile = prof
 		}
 
-		packageToFunctions[pkg] = append(packageToFunctions[pkg], functions...)
+		funcCoverages = p.RecordFunctionCoverage(functions)
+
+		packageToFunctions[pkg] = append(packageToFunctions[pkg], funcCoverages...)
 	}
 
 	log.Debugf("map of packages to functions %v", packageToFunctions)
