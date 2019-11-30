@@ -6,6 +6,7 @@
 
 * [Status](#status)
 * [Description](#description)
+* [Getting Started](#getting-started)
 * [Usage](#usage)
   * [Supported Golang Versions](#supported-golang-versions)
   * [Install](#install)
@@ -29,10 +30,75 @@ $ echo $?
 1
 ```
 
+## Getting Started
+Install gocheckcov
+```
+$ go get github.com/cvgw/gocheckcov
+```
+
+Generate a coverage profile.
+
+gocheckcov doesn't have any special requirements for the coverage profile.
+Just add the `-coverprofile=${out-file-path}` flag to your normal `go test` command.
+
+Initialize a new config for your project
+```
+/path/to/project$ gocheckcov check init --profile-file ${coverprofile_path}
+```
+
+Write some new code and generate a new coverage profile
+
+Check that code meets minimum coverage percentage
+```
+/path/to/project$ gocheckcov check --profile-file ${coverprofile_path}
+```
+
 ## Usage
 ```
-gocheckcov help
+$ gocheckcov
+analyzes coverage
+
+Usage:
+  gocheckcov [command]
+
+Available Commands:
+  check       Check whether pkg coverage meets specified minimum
+  help        Help about any command
+  version     print the gocheckcov version
+
+Flags:
+  -h, --help      help for gocheckcov
+  -v, --verbose   turn on verbose logging
+
+Use "gocheckcov [command] --help" for more information about a command.
 ```
+
+### Enforce Minimum Coverage From A Configuration File
+```
+$ gocheckcov check --profile-file ${coverprofile_path}
+```
+If all packages do not meet the specifed minimum coverage percentage gocheckcov will return exit code 1.
+
+`coverprofile_path` is the path to the file output from `go test -coverprofile=`.
+
+gocheckcov will search for a configuration file `.gocheckcov-config.yml` at the current working directory.
+
+You can also specify the path to a configuration file using the `--config-file` option.
+
+### Initialize A New Configuration File Using Current Coverage Percentages
+```
+$ gocheckcov check init --profile-file ${coverprofile_path}
+$ ls
+.gocheckcov-config.yml
+....
+$ cat .gocheckcov-config.yml
+packages:
+- name: some/pkg/in/your/path
+  min_coverage_percentage: 34.5 # whatever the current coverage is measured at
+```
+
+gocheckcov will write out a configuration file `.gocheckcov-config.yml` at the current working directory using the
+current coverage measured for each package in the specified path.
 
 ### Supported Golang Versions
 * 1.11.x
