@@ -4,6 +4,7 @@
 * [Status](#status)
 * [Description](#description)
 * [Usage](#usage)
+  * [Install](#install)
   * [Configuration](#configuration)
 * [Development](#development)
 * [Contributing](#contributing)
@@ -23,6 +24,9 @@ coverage 10% for package github.com/bar/foo/pkg/baz did not meet minimum 66.6%
 $ echo $?
 1
 ```
+
+## Install
+`go get github.com/cvgw/gocheckcov`
 
 ## Usage
 ```
