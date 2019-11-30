@@ -23,6 +23,46 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+func Test_NodeFromFilePath_bad_path(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	srcPath := "foo.go"
+
+	fset := token.NewFileSet()
+	_, err := NodeFromFilePath(srcPath, "", fset)
+	g.Expect(err).ToNot(BeNil())
+}
+
+func Test_NodeFromFilePath_bad_file(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	dir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		t.Errorf("could not create temp dir")
+		t.FailNow()
+	}
+
+	srcContent := `
+func Meow(x, y int) bool {
+  if x > y {
+	  return true
+  }
+	return false
+}
+`
+	srcPath := filepath.Join(dir, "src.go")
+	err = ioutil.WriteFile(srcPath, []byte(srcContent), 0644)
+
+	if err != nil {
+		t.Errorf("could not write to temp file %v", err)
+		t.FailNow()
+	}
+
+	fset := token.NewFileSet()
+	_, err = NodeFromFilePath(srcPath, "", fset)
+	g.Expect(err).ToNot(BeNil())
+}
+
 func Test_NodeFromFilePath(t *testing.T) {
 	g := NewGomegaWithT(t)
 

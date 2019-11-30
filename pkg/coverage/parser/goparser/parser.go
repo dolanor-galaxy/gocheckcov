@@ -15,11 +15,11 @@
 package goparser
 
 import (
+	log "github.com/sirupsen/logrus"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"io/ioutil"
-	"log"
 	"path/filepath"
 )
 
@@ -28,13 +28,13 @@ func NodeFromFilePath(filePath, goSrcPath string, fset *token.FileSet) (*ast.Fil
 
 	src, err := ioutil.ReadFile(pFilePath)
 	if err != nil {
-		log.Printf("could not read file from profile %v %v", pFilePath, err)
+		log.Debugf("could not read file from profile %v %v", pFilePath, err)
 		return nil, err
 	}
 
 	f, err := parser.ParseFile(fset, pFilePath, src, 0)
 	if err != nil {
-		log.Printf("could not parse file %v %v", pFilePath, err)
+		log.Debugf("could not parse file %v %v", pFilePath, err)
 		return nil, err
 	}
 

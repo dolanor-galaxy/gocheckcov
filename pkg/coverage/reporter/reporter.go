@@ -16,9 +16,10 @@ package reporter
 
 import (
 	"fmt"
-	"log"
 	"math"
-	"os"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/cvgw/gocheckcov/pkg/coverage/analyzer"
 	"github.com/cvgw/gocheckcov/pkg/coverage/config"
@@ -86,14 +87,24 @@ func (v Verifier) ReportPackageCoverages(
 	packageToFunctions map[string][]profile.FunctionCoverage,
 	pc *analyzer.PackageCoverages,
 	printFunctions bool,
-) {
+) error {
 	for pkg := range packageToFunctions {
 		functions := packageToFunctions[pkg]
+
+		if pc == nil {
+			err := fmt.Errorf("can't report coverages because coverage data is nil")
+			log.Debug(err)
+
+			return err
+		}
+
 		cov, ok := pc.Coverage(pkg)
 
 		if !ok {
-			log.Printf("could not get coverage for package %v", pkg)
-			os.Exit(1)
+			err := fmt.Errorf("could not get coverage for package %v", pkg)
+			log.Debug(err)
+
+			return err
 		}
 
 		if v.PrintFunctions {
@@ -108,25 +119,32 @@ func (v Verifier) ReportPackageCoverages(
 			cov.StatementCount,
 		)
 	}
+
+	return nil
 }
 
 func (v Verifier) ReportCoverage(
 	packageToFunctions map[string][]profile.FunctionCoverage,
 	printFunctions bool,
 	configFile []byte,
-) map[string]float64 {
+) (map[string]float64, error) {
 	pkgToCoverage := make(map[string]float64)
 	pc := analyzer.NewPackageCoverages(packageToFunctions)
 
-	v.ReportPackageCoverages(packageToFunctions, pc, printFunctions)
+	err := v.ReportPackageCoverages(packageToFunctions, pc, printFunctions)
+	if err != nil {
+		return nil, err
+	}
 
 	fail := false
 
 	for pkg := range packageToFunctions {
 		cov, ok := pc.Coverage(pkg)
 		if !ok {
-			log.Printf("could not get coverage for package %v", pkg)
-			os.Exit(1)
+			err := fmt.Errorf("could not get coverage for package %v", pkg)
+			log.Debug(err)
+
+			return nil, err
 		}
 
 		var cfgPkg config.ConfigPackage
@@ -134,8 +152,10 @@ func (v Verifier) ReportCoverage(
 		if len(configFile) != 0 {
 			cfg := config.ConfigFile{}
 			if err := yaml.Unmarshal(configFile, &cfg); err != nil {
-				log.Printf("could not unmarshal yaml for config file %v", err)
-				os.Exit(1)
+				err = errors.Wrap(err, "could not unmarshal yaml for config file %v")
+				log.Debug(err)
+
+				return nil, err
 			}
 
 			var ok bool
@@ -157,8 +177,8 @@ func (v Verifier) ReportCoverage(
 	}
 
 	if fail {
-		os.Exit(1)
+		return nil, fmt.Errorf("packages failed to meet minimum coverage")
 	}
 
-	return pkgToCoverage
+	return pkgToCoverage, nil
 }
