@@ -30,7 +30,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	defaultConfigPath = ".gocheckcov-config.yml"
+)
+
 var (
+	noConfig       bool
 	configFile     string
 	ProfileFile    string
 	printFunctions bool
@@ -60,20 +65,24 @@ var (
 			packageToFunctions := analyzer.MapPackagesToFunctions(profilePath, projectFiles, fset, goSrc)
 
 			var cfContent []byte
-			if configFile != "" {
+			if !noConfig {
+				if configFile == "" {
+					configFile = defaultConfigPath
+				}
 				cfContent, err = ioutil.ReadFile(configFile)
 				if err != nil {
 					log.Printf("could not read config file %v %v", configFile, err)
 					os.Exit(1)
 				}
 			}
+			cliL := reporter.CliLogger{}
 			v := reporter.Verifier{
-				Out:            reporter.CliLogger{},
+				Out:            cliL,
 				PrintFunctions: printFunctions,
 				MinCov:         minCov,
 			}
 			if _, err := v.ReportCoverage(packageToFunctions, printFunctions, cfContent); err != nil {
-				log.Print(err)
+				cliL.Printf("%v", err)
 				os.Exit(1)
 			}
 		},
@@ -84,6 +93,8 @@ func init() {
 	rootCmd.AddCommand(checkCmd)
 
 	checkCmd.Flags().BoolVar(&printFunctions, "print-functions", false, "print coverage for individual functions")
+
+	checkCmd.Flags().BoolVar(&noConfig, "no-config", false, "do not read configuration from file")
 
 	checkCmd.Flags().Float64VarP(
 		&minCov,

@@ -47,6 +47,8 @@ func SetSrcPath(args []string) string {
 		if err != nil {
 			log.Debugf("could not get working directory %v", err)
 		}
+
+		srcPath = filepath.Join(srcPath, "...")
 	}
 
 	return srcPath

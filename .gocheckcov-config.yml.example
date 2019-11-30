@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+min_coverage_percentage: 50
 packages:
-- name: github.com/GoogleContainerTools/kaniko/pkg/executor
+- name: github.com/cvgw/gocheckcov/pkg/coverage/analyzer
   min_coverage_percentage: 80
