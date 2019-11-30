@@ -1,4 +1,4 @@
-default: license test lint
+default: check-license test lint
 
 test:
 	go test ./...
@@ -9,5 +9,5 @@ lint:
 build:
 	go build
 
-license:
+check-license:
 	./scripts/check_license.sh

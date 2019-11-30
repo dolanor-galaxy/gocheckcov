@@ -32,8 +32,12 @@ func (l CliLogger) Printf(fmtString string, args ...interface{}) {
 	fmt.Println(fmt.Sprintf(fmtString, args...))
 }
 
+type logger interface {
+	Printf(string, ...interface{})
+}
+
 type Verifier struct {
-	Out            CliLogger
+	Out            logger
 	MinCov         float64
 	PrintFunctions bool
 }

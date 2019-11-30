@@ -15,10 +15,12 @@
 package cmd
 
 import (
+	"go/build"
 	"go/token"
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/cvgw/gocheckcov/pkg/coverage/analyzer"
@@ -47,7 +49,8 @@ var checkInitCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		packageToFunctions := analyzer.MapPackagesToFunctions(profilePath, projectFiles, fset)
+		goSrc := filepath.Join(build.Default.GOPATH, "src")
+		packageToFunctions := analyzer.MapPackagesToFunctions(profilePath, projectFiles, fset, goSrc)
 		pc := analyzer.NewPackageCoverages(packageToFunctions)
 
 		configFile := config.ConfigFile{}

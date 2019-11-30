@@ -52,7 +52,7 @@ jobs:
         GOPATH: /home/runner/work/gocheckcov/go
       run: |
         export PATH=$PATH:$GOPATH/bin
-        make license lint
+        make check-license lint
         go test -race -covermode atomic -coverprofile=profile.cov ./...
 
 
