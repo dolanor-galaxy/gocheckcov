@@ -15,7 +15,8 @@
 package config
 
 type ConfigFile struct {
-	Packages []ConfigPackage `yaml:"packages"`
+	MinCoveragePercentage float64         `yaml:"min_coverage_percentage"`
+	Packages              []ConfigPackage `yaml:"packages"`
 }
 
 func (c ConfigFile) GetPackage(pkg string) (ConfigPackage, bool) {

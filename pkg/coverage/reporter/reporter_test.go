@@ -146,6 +146,48 @@ packages:
 `),
 			}
 		},
+		"one function does not meet min coverage for package": func(ctrl *gomock.Controller) testcase {
+			mockLogger := mock_reporter.NewMocklogger(ctrl)
+
+			mockLogger.EXPECT().Printf(gomock.Any(), gomock.Any()).MinTimes(1)
+
+			return testcase{
+				verifier: &Verifier{Out: mockLogger},
+				input: map[string][]profile.FunctionCoverage{
+					"foo/bar": []profile.FunctionCoverage{
+						{CoveredCount: 0, StatementCount: 1},
+					},
+				},
+				expectErr: true,
+				configData: []byte(`
+min_coverage_percentage: 0
+packages:
+- name: foo/bar
+  min_coverage_percentage: 10
+`),
+			}
+		},
+		"one function does not meet global min coverage": func(ctrl *gomock.Controller) testcase {
+			mockLogger := mock_reporter.NewMocklogger(ctrl)
+
+			mockLogger.EXPECT().Printf(gomock.Any(), gomock.Any()).MinTimes(1)
+
+			return testcase{
+				verifier: &Verifier{Out: mockLogger},
+				input: map[string][]profile.FunctionCoverage{
+					"foo/bar": []profile.FunctionCoverage{
+						{CoveredCount: 0, StatementCount: 1},
+					},
+				},
+				expectErr: true,
+				configData: []byte(`
+min_coverage_percentage: 20
+packages:
+- name: baz
+  min_coverage_percentage: 0
+`),
+			}
+		},
 		"one function with one statement with a bad config file": func(ctrl *gomock.Controller) testcase {
 			mockLogger := mock_reporter.NewMocklogger(ctrl)
 

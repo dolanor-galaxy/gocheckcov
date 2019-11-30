@@ -162,7 +162,10 @@ func (v Verifier) ReportCoverage(
 			cfgPkg, ok = cfg.GetPackage(pkg)
 
 			if !ok {
-				continue
+				cfgPkg = config.ConfigPackage{
+					Name:                  pkg,
+					MinCoveragePercentage: cfg.MinCoveragePercentage,
+				}
 			}
 		} else {
 			cfgPkg = config.ConfigPackage{
