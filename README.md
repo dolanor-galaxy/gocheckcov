@@ -1,4 +1,5 @@
 # gocheckcov
+![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/cvgw/gocheckcov/Go/master?style=plastic)
 
 ## Status
 Alpha
