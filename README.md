@@ -1,5 +1,6 @@
 # gocheckcov
 ![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/cvgw/gocheckcov/Go/master?style=plastic)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/cvgw/gocheckcov?style=plastic)
 
 * [Status](#status)
 * [Description](#description)
