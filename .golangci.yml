@@ -232,6 +232,22 @@ linters:
     - maligned
     - prealloc
     - unused
+    - gosimple
+    - structcheck
+    - varcheck
+    - ineffassign
+    - deadcode
+    - typecheck
+    - unconvert
+    - dupl
+    - goconst
+    - misspell
+    - lll
+    - unparam
+    - scopelint
+    - whitespace
+    - wsl
+    - gocyclo
   disable:
     - gosec
   disable-all: false

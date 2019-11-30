@@ -31,7 +31,8 @@ import (
 var checkInitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Create a new config file using current coverage",
-	Long:  `Create a new configuration file for gocheckcov which lists all of packages in the specified path and sets the minimum converage percentage for each to the current coverage percentage for that package`,
+	Long: `Create a new configuration file for gocheckcov which lists all of packages in the specified path and sets ` +
+		`the minimum converage percentage for each to the current coverage percentage for that package`,
 	Run: func(cmd *cobra.Command, args []string) {
 		profilePath := ProfileFile
 		fset := token.NewFileSet()

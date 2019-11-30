@@ -30,19 +30,23 @@ import (
 
 func NodesFromProfiles(goSrcPath string, profiles []*cover.Profile, fset *token.FileSet) (map[string]*ast.File, error) {
 	filePaths := make([]string, 0)
+
 	for _, prof := range profiles {
 		if prof.FileName == "" {
 			return nil, fmt.Errorf("profile has a blank file name %v", prof)
 		}
+
 		filePaths = append(filePaths, prof.FileName)
 	}
 
 	filePathToNode := make(map[string]*ast.File)
+
 	for _, filePath := range filePaths {
 		node, err := NodeFromFilePath(filePath, goSrcPath, fset)
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("could not get node from file path %v", filePath))
 		}
+
 		filePathToNode[filePath] = node
 	}
 
@@ -63,6 +67,7 @@ func NodeFromFilePath(filePath, goSrcPath string, fset *token.FileSet) (*ast.Fil
 		log.Printf("could not parse file %v %v", pFilePath, err)
 		return nil, err
 	}
+
 	return f, nil
 }
 
@@ -87,17 +92,22 @@ func (p Parser) RecordStatementCoverage(functions []statements.Function) []state
 					// Block starts after the function statement ends
 					continue
 				}
+
 				if block.EndLine < startLine || (block.EndLine == startLine && block.EndCol <= startCol) {
 					// Block ends before the function statement starts
 					continue
 				}
+
 				statement.ExecutedCount += block.Count
 				statements[sIdx] = statement
+
 				break
 			}
 		}
+
 		function.Statements = statements
 		functions[fIdx] = function
 	}
+
 	return functions
 }
