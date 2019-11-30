@@ -3,6 +3,17 @@
 This doc explains the development workflow so you can get started
 [contributing](./CONTRIBUTING.md) to gocheckcov!
 
+* [Supported Golang Versions](#supported-golang-versions)
+* [Getting Started](#getting-started)
+* [Checkout Your Fork](#checkout-your-fork)
+* [Testing](#testing-gocheckcov)
+* [Creating A PR](#creating-a-pr)
+
+## Supported Golang versions
+* 1.11.x
+* 1.12.x
+* 1.13.x
+
 ## Getting started
 
 First you will need to setup your GitHub account and create a fork:
