@@ -23,15 +23,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cvgw/gocheckcov/pkg/coverage/statements"
+	"github.com/cvgw/gocheckcov/pkg/coverage/profile"
 	. "github.com/onsi/gomega"
 )
 
 func Test_NewPackageCoverages(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	pkgToFuncs := map[string][]statements.Function{
-		"github.com/foo/bar/pkg/baz": []statements.Function{},
+	pkgToFuncs := map[string][]profile.FunctionCoverage{
+		"github.com/foo/bar/pkg/baz": []profile.FunctionCoverage{},
 	}
 
 	p := NewPackageCoverages(pkgToFuncs)
@@ -41,8 +41,8 @@ func Test_NewPackageCoverages(t *testing.T) {
 func Test_PackageCoverages_Coverage(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	pkgToFuncs := map[string][]statements.Function{
-		"github.com/foo/bar/pkg/baz": []statements.Function{},
+	pkgToFuncs := map[string][]profile.FunctionCoverage{
+		"github.com/foo/bar/pkg/baz": []profile.FunctionCoverage{},
 	}
 
 	p := NewPackageCoverages(pkgToFuncs)

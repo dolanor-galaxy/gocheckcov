@@ -14,17 +14,6 @@
 
 package statements
 
-type Function struct {
-	Name        string
-	Statements  []Statement
-	StartOffset int
-	StartLine   int
-	StartCol    int
-	EndOffset   int
-	EndLine     int
-	EndCol      int
-}
-
 type Statement struct {
 	StartOffset   int
 	StartLine     int

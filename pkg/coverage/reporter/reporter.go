@@ -22,7 +22,7 @@ import (
 
 	"github.com/cvgw/gocheckcov/pkg/coverage/analyzer"
 	"github.com/cvgw/gocheckcov/pkg/coverage/config"
-	"github.com/cvgw/gocheckcov/pkg/coverage/statements"
+	"github.com/cvgw/gocheckcov/pkg/coverage/profile"
 	"gopkg.in/yaml.v2"
 )
 
@@ -64,22 +64,18 @@ func (v Verifier) VerifyCoverage(pkg config.ConfigPackage, cov float64) bool {
 	return true
 }
 
-func (v Verifier) PrintReport(functions []statements.Function) {
+func (v Verifier) PrintReport(functions []profile.FunctionCoverage) {
 	for _, function := range functions {
-		executedStatementsCount := 0
+		var executedStatementsCount int64
 
-		for _, s := range function.Statements {
-			if s.ExecutedCount > 0 {
-				executedStatementsCount++
-			}
-		}
+		executedStatementsCount += function.CoveredCount
 
-		val := (float64(executedStatementsCount) / float64(len(function.Statements))) * 10000
+		val := (float64(executedStatementsCount) / float64(function.StatementCount)) * 10000
 		percent := (math.Floor(val) / 10000) * 100
 		v.Out.Printf(
 			"function %v has %v statements of which %v were executed for a percent of %v",
 			function.Name,
-			len(function.Statements),
+			function.StatementCount,
 			executedStatementsCount,
 			percent,
 		)
@@ -87,7 +83,7 @@ func (v Verifier) PrintReport(functions []statements.Function) {
 }
 
 func (v Verifier) ReportPackageCoverages(
-	packageToFunctions map[string][]statements.Function,
+	packageToFunctions map[string][]profile.FunctionCoverage,
 	pc *analyzer.PackageCoverages,
 	printFunctions bool,
 ) {
@@ -115,7 +111,7 @@ func (v Verifier) ReportPackageCoverages(
 }
 
 func (v Verifier) ReportCoverage(
-	packageToFunctions map[string][]statements.Function,
+	packageToFunctions map[string][]profile.FunctionCoverage,
 	printFunctions bool,
 	configFile []byte,
 ) map[string]float64 {

@@ -23,7 +23,7 @@ import (
 	"log"
 	"path/filepath"
 
-	"github.com/cvgw/gocheckcov/pkg/coverage/statements"
+	"github.com/cvgw/gocheckcov/pkg/coverage/functions"
 	"github.com/pkg/errors"
 	"golang.org/x/tools/cover"
 )
@@ -71,43 +71,84 @@ func NodeFromFilePath(filePath, goSrcPath string, fset *token.FileSet) (*ast.Fil
 	return f, nil
 }
 
+type FunctionCoverage struct {
+	StatementCount int64
+	CoveredCount   int64
+	Name           string
+}
+
 type Parser struct {
 	Fset     *token.FileSet
 	FilePath string
 	Profile  *cover.Profile
 }
 
-func (p Parser) RecordStatementCoverage(functions []statements.Function) []statements.Function {
-	for fIdx, function := range functions {
-		statements := function.Statements
-		for sIdx, statement := range statements {
-			for _, block := range p.Profile.Blocks {
-				//name := function.name
-				startLine := statement.StartLine
-				startCol := statement.StartCol
-				endLine := statement.EndLine
-				endCol := statement.EndCol
+func (p Parser) RecordFunctionCoverage(functions []functions.Function) []FunctionCoverage {
+	out := make([]FunctionCoverage, 0, len(functions))
 
-				if block.StartLine > endLine || (block.StartLine == endLine && block.StartCol >= endCol) {
-					// Block starts after the function statement ends
-					continue
-				}
+	for _, function := range functions {
+		fc := FunctionCoverage{
+			Name: function.Name,
+		}
 
-				if block.EndLine < startLine || (block.EndLine == startLine && block.EndCol <= startCol) {
-					// Block ends before the function statement starts
-					continue
-				}
+		for _, block := range p.Profile.Blocks {
+			startLine := function.StartLine
+			startCol := function.StartCol
+			endLine := function.EndLine
+			endCol := function.EndCol
 
-				statement.ExecutedCount += block.Count
-				statements[sIdx] = statement
+			if block.StartLine > endLine || (block.StartLine == endLine && block.StartCol >= endCol) {
+				// Block starts after the function statement ends
+				continue
+			}
 
-				break
+			if block.EndLine < startLine || (block.EndLine == startLine && block.EndCol <= startCol) {
+				// Block ends before the function statement starts
+				continue
+			}
+
+			fc.StatementCount += int64(block.NumStmt)
+			if block.Count > 0 {
+				fc.CoveredCount += int64(block.NumStmt)
 			}
 		}
 
-		function.Statements = statements
-		functions[fIdx] = function
+		out = append(out, fc)
 	}
 
-	return functions
+	return out
 }
+
+//func (p Parser) RecordStatementCoverage(functions []functions.Function) []functions.Function {
+//  for fIdx, function := range functions {
+//    statements := function.Statements
+//    for sIdx, statement := range statements {
+//      for _, block := range p.Profile.Blocks {
+//        startLine := statement.StartLine
+//        startCol := statement.StartCol
+//        endLine := statement.EndLine
+//        endCol := statement.EndCol
+
+//        if block.StartLine > endLine || (block.StartLine == endLine && block.StartCol >= endCol) {
+//          // Block starts after the function ends
+//          continue
+//        }
+
+//        if block.EndLine < startLine || (block.EndLine == startLine && block.EndCol <= startCol) {
+//          // Block ends before the function starts
+//          continue
+//        }
+
+//        statement.ExecutedCount += block.Count
+//        statements[sIdx] = statement
+
+//        break
+//      }
+//    }
+
+//    function.Statements = statements
+//    functions[fIdx] = function
+//  }
+
+//  return functions
+//}

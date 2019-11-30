@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/cvgw/gocheckcov/pkg/coverage/statements"
 	. "github.com/onsi/gomega"
 	"golang.org/x/tools/cover"
 )
@@ -216,44 +215,4 @@ func Meow(x, y int) bool {
 	astFile, err := NodeFromFilePath(srcPath, "", fset)
 	g.Expect(err).To(BeNil())
 	g.Expect(astFile).ToNot(BeNil())
-}
-
-func Test_Parser_RecordStatementCoverage(t *testing.T) {
-	g := NewGomegaWithT(t)
-
-	functions := []statements.Function{
-		{StartCol: 2, StartLine: 4, EndCol: 4, EndLine: 7},
-	}
-	profile := &cover.Profile{
-		Blocks: []cover.ProfileBlock{
-			{StartCol: 2, StartLine: 4, EndCol: 4, EndLine: 7, Count: 2},
-		},
-	}
-
-	filePath := "foo.go"
-	fset := token.NewFileSet()
-
-	p := Parser{
-		Fset:     fset,
-		FilePath: filePath,
-		Profile:  profile,
-	}
-
-	expected := []statements.Function{}
-
-	for _, f := range functions {
-		statements := []statements.Statement{}
-		copy(statements, f.Statements)
-
-		for i, stmt := range statements {
-			stmt.ExecutedCount = 2
-			statements[i] = stmt
-		}
-
-		expected = append(expected, f)
-	}
-
-	res := p.RecordStatementCoverage(functions)
-	g.Expect(res).To(HaveLen(1))
-	g.Expect(res).To(ConsistOf(expected))
 }

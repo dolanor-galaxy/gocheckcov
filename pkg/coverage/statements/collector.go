@@ -14,251 +14,175 @@
 
 package statements
 
-import (
-	"fmt"
-	log "github.com/sirupsen/logrus"
-	"go/ast"
-	"go/token"
-)
+//import (
+//  "fmt"
+//  "go/ast"
+//  "go/token"
+//)
 
-type visitor struct {
-	err       error
-	fset      *token.FileSet
-	functions []Function
-}
+//type stmtCollector struct {
+//  statements []ast.Stmt
+//}
 
-func (v *visitor) Visit(n ast.Node) ast.Visitor {
-	switch x := n.(type) {
-	case *ast.FuncDecl:
-		body := x.Body
-		name := x.Name.Name
+//func (sc *stmtCollector) collect(s ast.Stmt, fset *token.FileSet) error {
+//  statements := []ast.Stmt{}
 
-		start := v.fset.Position(n.Pos())
-		end := v.fset.Position(n.End())
-		startLine := start.Line
-		startCol := start.Column
-		endLine := end.Line
-		endCol := end.Column
-		f := Function{
-			Name:      name,
-			StartLine: startLine,
-			StartCol:  startCol,
-			EndLine:   endLine,
-			EndCol:    endCol,
-		}
+//  switch s := s.(type) {
+//  case *ast.BlockStmt:
+//    if s == nil {
+//      return fmt.Errorf("something went wrong, block statement was nil")
+//    }
 
-		sc := &stmtCollector{}
-		if err := sc.collect(body, v.fset); err != nil {
-			v.err = err
-			return nil
-		}
+//    statements = s.List
+//  case *ast.CaseClause:
+//    statements = s.Body
+//  case *ast.CommClause:
+//    statements = s.Body
+//  default:
+//    if err := sc.descend(s, fset); err != nil {
+//      return err
+//    }
+//  }
 
-		stmts := sc.statements
+//  if err := sc.filterStatements(statements, fset); err != nil {
+//    return err
+//  }
 
-		log.Debugf("%v statements %v", f.Name, stmts)
+//  return nil
+//}
 
-		convertedStmts := make([]Statement, 0, len(stmts))
+//func (sc *stmtCollector) filterStatements(statements []ast.Stmt, fset *token.FileSet) error {
+//  for i := 0; i < len(statements); i++ {
+//    s := (statements)[i]
+//    switch s.(type) {
+//    case *ast.CaseClause, *ast.CommClause, *ast.BlockStmt:
+//      // don't descend any deeper into the tree
+//      break
+//    default:
+//      sc.statements = append(sc.statements, s)
+//    }
 
-		for _, stmnt := range stmts {
-			start := v.fset.Position(stmnt.Pos())
-			end := v.fset.Position(stmnt.End())
-			startLine := start.Line
-			startCol := start.Column
-			endLine := end.Line
-			endCol := end.Column
-			s := Statement{
-				StartLine: startLine,
-				StartCol:  startCol,
-				EndLine:   endLine,
-				EndCol:    endCol,
-			}
-			convertedStmts = append(convertedStmts, s)
-		}
+//    if err := sc.collect(s, fset); err != nil {
+//      return err
+//    }
+//  }
 
-		f.Statements = convertedStmts
-		v.functions = append(v.functions, f)
-	default:
-	}
+//  return nil
+//}
 
-	return v
-}
+//func (sc *stmtCollector) descend(n ast.Node, fset *token.FileSet) error {
+//  var err error
+//  switch s := n.(type) {
+//  case *ast.ForStmt:
+//    err = sc.handleForStmt(s, fset)
+//  case *ast.IfStmt:
+//    err = sc.handleIfStmt(s, fset)
+//  case *ast.LabeledStmt:
+//    err = sc.collect(s.Stmt, fset)
+//  case *ast.RangeStmt:
+//    err = sc.collect(s.Body, fset)
+//  case *ast.SelectStmt:
+//    err = sc.collect(s.Body, fset)
+//  case *ast.SwitchStmt:
+//    if s.Init != nil {
+//      if e := sc.collect(s.Init, fset); e != nil {
+//        return e
+//      }
+//    }
 
-func CollectFunctions(f *ast.File, fset *token.FileSet) ([]Function, error) {
-	v := &visitor{fset: fset}
-	ast.Walk(v, f)
+//    err = sc.collect(s.Body, fset)
+//  case *ast.TypeSwitchStmt:
+//    err = sc.handleTypeSwitchStmt(s, fset)
+//  }
 
-	if v.err != nil {
-		return nil, v.err
-	}
+//  return err
+//}
 
-	log.Debugf("visitor functions %v", v.functions)
+//func (sc *stmtCollector) handleTypeSwitchStmt(s *ast.TypeSwitchStmt, fset *token.FileSet) error {
+//  if s.Init != nil {
+//    if err := sc.collect(s.Init, fset); err != nil {
+//      return err
+//    }
+//  }
 
-	return v.functions, nil
-}
+//  if err := sc.collect(s.Assign, fset); err != nil {
+//    return err
+//  }
 
-type stmtCollector struct {
-	statements []ast.Stmt
-}
+//  if err := sc.collect(s.Body, fset); err != nil {
+//    return err
+//  }
 
-func (sc *stmtCollector) collect(s ast.Stmt, fset *token.FileSet) error {
-	statements := []ast.Stmt{}
+//  return nil
+//}
 
-	switch s := s.(type) {
-	case *ast.BlockStmt:
-		if s == nil {
-			return fmt.Errorf("something went wrong, block statement was nil")
-		}
+//func (sc *stmtCollector) handleForStmt(s *ast.ForStmt, fset *token.FileSet) error {
+//  if s.Init != nil {
+//    if err := sc.collect(s.Init, fset); err != nil {
+//      return err
+//    }
+//  }
 
-		statements = s.List
-	case *ast.CaseClause:
-		statements = s.Body
-	case *ast.CommClause:
-		statements = s.Body
-	default:
-		if err := sc.descend(s, fset); err != nil {
-			return err
-		}
-	}
+//  if s.Post != nil {
+//    if err := sc.collect(s.Post, fset); err != nil {
+//      return err
+//    }
+//  }
 
-	if err := sc.filterStatements(statements, fset); err != nil {
-		return err
-	}
+//  if err := sc.collect(s.Body, fset); err != nil {
+//    return err
+//  }
 
-	return nil
-}
+//  return nil
+//}
 
-func (sc *stmtCollector) filterStatements(statements []ast.Stmt, fset *token.FileSet) error {
-	for i := 0; i < len(statements); i++ {
-		s := (statements)[i]
-		switch s.(type) {
-		case *ast.CaseClause, *ast.CommClause, *ast.BlockStmt:
-			// don't descend any deeper into the tree
-			break
-		default:
-			sc.statements = append(sc.statements, s)
-		}
+//func (sc *stmtCollector) handleIfStmt(s *ast.IfStmt, fset *token.FileSet) error {
+//  if s.Init != nil {
+//    if err := sc.collect(s.Init, fset); err != nil {
+//      return err
+//    }
+//  }
 
-		if err := sc.collect(s, fset); err != nil {
-			return err
-		}
-	}
+//  if err := sc.collect(s.Body, fset); err != nil {
+//    return err
+//  }
 
-	return nil
-}
+//  if s.Else != nil {
+//    if err := sc.handleIfStmtElse(s, fset); err != nil {
+//      return err
+//    }
+//  }
 
-func (sc *stmtCollector) descend(n ast.Node, fset *token.FileSet) error {
-	var err error
-	switch s := n.(type) {
-	case *ast.ForStmt:
-		err = sc.handleForStmt(s, fset)
-	case *ast.IfStmt:
-		err = sc.handleIfStmt(s, fset)
-	case *ast.LabeledStmt:
-		err = sc.collect(s.Stmt, fset)
-	case *ast.RangeStmt:
-		err = sc.collect(s.Body, fset)
-	case *ast.SelectStmt:
-		err = sc.collect(s.Body, fset)
-	case *ast.SwitchStmt:
-		if s.Init != nil {
-			if e := sc.collect(s.Init, fset); e != nil {
-				return e
-			}
-		}
+//  return nil
+//}
 
-		err = sc.collect(s.Body, fset)
-	case *ast.TypeSwitchStmt:
-		err = sc.handleTypeSwitchStmt(s, fset)
-	}
+//func (sc *stmtCollector) handleIfStmtElse(s *ast.IfStmt, fset *token.FileSet) error {
+//  // Code copied from go.tools/cmd/cover, to deal with "if x {} else if y {}"
+//  // Copied from go.tools/cmd/cover
+//  // Handle "if x {} else if y {}"
+//  // AST doesn't record the location of else statements. Make
+//  // a reasonable guess
+//  const backupToElse = token.Pos(len("else "))
 
-	return err
-}
+//  switch stmt := s.Else.(type) {
+//  case *ast.IfStmt:
+//    block := &ast.BlockStmt{
+//      // Covered part probably starts at the "else"
+//      Lbrace: stmt.If - backupToElse,
+//      List:   []ast.Stmt{stmt},
+//      Rbrace: stmt.End(),
+//    }
+//    s.Else = block
+//  case *ast.BlockStmt:
+//    // Block probably starts at the "else"
+//    stmt.Lbrace -= backupToElse
+//  default:
+//    return fmt.Errorf("unexpected node type for if statement")
+//  }
 
-func (sc *stmtCollector) handleTypeSwitchStmt(s *ast.TypeSwitchStmt, fset *token.FileSet) error {
-	if s.Init != nil {
-		if err := sc.collect(s.Init, fset); err != nil {
-			return err
-		}
-	}
+//  if err := sc.collect(s.Else, fset); err != nil {
+//    return err
+//  }
 
-	if err := sc.collect(s.Assign, fset); err != nil {
-		return err
-	}
-
-	if err := sc.collect(s.Body, fset); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (sc *stmtCollector) handleForStmt(s *ast.ForStmt, fset *token.FileSet) error {
-	if s.Init != nil {
-		if err := sc.collect(s.Init, fset); err != nil {
-			return err
-		}
-	}
-
-	if s.Post != nil {
-		if err := sc.collect(s.Post, fset); err != nil {
-			return err
-		}
-	}
-
-	if err := sc.collect(s.Body, fset); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (sc *stmtCollector) handleIfStmt(s *ast.IfStmt, fset *token.FileSet) error {
-	if s.Init != nil {
-		if err := sc.collect(s.Init, fset); err != nil {
-			return err
-		}
-	}
-
-	if err := sc.collect(s.Body, fset); err != nil {
-		return err
-	}
-
-	if s.Else != nil {
-		if err := sc.handleIfStmtElse(s, fset); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (sc *stmtCollector) handleIfStmtElse(s *ast.IfStmt, fset *token.FileSet) error {
-	// Code copied from go.tools/cmd/cover, to deal with "if x {} else if y {}"
-	// Copied from go.tools/cmd/cover
-	// Handle "if x {} else if y {}"
-	// AST doesn't record the location of else statements. Make
-	// a reasonable guess
-	const backupToElse = token.Pos(len("else "))
-
-	switch stmt := s.Else.(type) {
-	case *ast.IfStmt:
-		block := &ast.BlockStmt{
-			// Covered part probably starts at the "else"
-			Lbrace: stmt.If - backupToElse,
-			List:   []ast.Stmt{stmt},
-			Rbrace: stmt.End(),
-		}
-		s.Else = block
-	case *ast.BlockStmt:
-		// Block probably starts at the "else"
-		stmt.Lbrace -= backupToElse
-	default:
-		return fmt.Errorf("unexpected node type for if statement")
-	}
-
-	if err := sc.collect(s.Else, fset); err != nil {
-		return err
-	}
-
-	return nil
-}
+//  return nil
+//}
