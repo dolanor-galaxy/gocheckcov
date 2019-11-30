@@ -25,7 +25,7 @@ type StmtCollector struct {
 }
 
 func (sc *StmtCollector) Collect(s ast.Stmt, fset *token.FileSet) error {
-	statements := []ast.Stmt{}
+	statements := make([]ast.Stmt, 0)
 
 	switch s := s.(type) {
 	case *ast.BlockStmt:
@@ -46,6 +46,10 @@ func (sc *StmtCollector) Collect(s ast.Stmt, fset *token.FileSet) error {
 
 	if err := sc.filterStatements(statements, fset); err != nil {
 		return err
+	}
+
+	if sc.Statements == nil {
+		sc.Statements = make([]ast.Stmt, 0)
 	}
 
 	return nil
