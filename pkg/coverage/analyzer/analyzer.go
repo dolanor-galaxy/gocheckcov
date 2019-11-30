@@ -37,26 +37,33 @@ func (p *PackageCoverages) Coverage(pkg string) (coverage, bool) {
 
 func NewPackageCoverages(packagesToFunctions map[string][]statements.Function) *PackageCoverages {
 	pkgToCoverage := make(map[string]coverage)
+
 	for pkg, functions := range packagesToFunctions {
 		statementCount := 0
 		executedCount := 0
+
 		for _, function := range functions {
 			for _, stmt := range function.Statements {
 				statementCount++
+
 				if stmt.ExecutedCount > 0 {
 					executedCount++
 				}
 			}
 		}
+
 		var covPer float64
+
 		if executedCount == 0 && statementCount == 0 {
 			covPer = 100
 		} else {
-			covPer = float64(math.Floor((float64(executedCount)/float64(statementCount))*10000) / 100)
+			covPer = math.Floor((float64(executedCount)/float64(statementCount))*10000) / 100
 		}
+
 		c := coverage{StatementCount: statementCount, ExecutedCount: executedCount, CoveragePercent: covPer}
 		pkgToCoverage[pkg] = c
 	}
+
 	return &PackageCoverages{
 		coverages: pkgToCoverage,
 	}

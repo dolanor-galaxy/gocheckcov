@@ -29,6 +29,7 @@ func Meow(x, y int) bool {
 }
 `
 	err = ioutil.WriteFile(file.Name(), []byte(profileFileContent), 0644)
+
 	if err != nil {
 		t.Errorf("could not write to temp file %v", err)
 		t.FailNow()
@@ -36,6 +37,7 @@ func Meow(x, y int) bool {
 
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, file.Name(), []byte(profileFileContent), 0)
+
 	if err != nil {
 		t.Errorf("could not create ast for file %v %v", file.Name(), err)
 		t.FailNow()

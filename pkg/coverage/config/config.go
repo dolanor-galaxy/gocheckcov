@@ -24,6 +24,7 @@ func (c ConfigFile) GetPackage(pkg string) (ConfigPackage, bool) {
 			return p, true
 		}
 	}
+
 	return ConfigPackage{}, false
 }
 

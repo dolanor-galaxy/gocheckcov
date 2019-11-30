@@ -30,6 +30,7 @@ func Meow(x, y int) bool {
 }
 `
 	err = ioutil.WriteFile(file.Name(), []byte(profileFileContent), 0644)
+
 	if err != nil {
 		t.Errorf("could not write to temp file %v", err)
 		t.FailNow()
@@ -67,6 +68,7 @@ func Meow(x, y int) bool {
 }
 `
 	err = ioutil.WriteFile(file.Name(), []byte(profileFileContent), 0644)
+
 	if err != nil {
 		t.Errorf("could not write to temp file %v", err)
 		t.FailNow()
@@ -101,13 +103,16 @@ func Test_Parser_RecordStatementCoverage(t *testing.T) {
 	}
 
 	expected := []statements.Function{}
+
 	for _, f := range functions {
 		statements := []statements.Statement{}
 		copy(statements, f.Statements)
+
 		for i, stmt := range statements {
 			stmt.ExecutedCount = 2
 			statements[i] = stmt
 		}
+
 		expected = append(expected, f)
 	}
 

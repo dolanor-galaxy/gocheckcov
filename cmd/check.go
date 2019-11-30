@@ -82,13 +82,32 @@ func init() {
 
 	checkCmd.Flags().BoolVar(&printFunctions, "print-functions", false, "print coverage for individual functions")
 
-	checkCmd.Flags().Float64VarP(&minCov, "minimum-coverage", "m", 0, "minimum coverage percentage to enforce for all packages (defaults to 0)")
+	checkCmd.Flags().Float64VarP(
+		&minCov,
+		"minimum-coverage",
+		"m",
+		0,
+		"minimum coverage percentage to enforce for all packages (defaults to 0)",
+	)
 
-	checkCmd.Flags().StringVarP(&configFile, "config-file", "c", "", "path to configuration file")
+	checkCmd.Flags().StringVarP(
+		&configFile,
+		"config-file",
+		"c",
+		"",
+		"path to configuration file",
+	)
 
-	checkCmd.PersistentFlags().StringVarP(&skipDirs, "skip-dirs", "s", "vendor", "command separted list of directories to skip when reporting coverage")
+	checkCmd.PersistentFlags().StringVarP(
+		&skipDirs,
+		"skip-dirs",
+		"s",
+		"vendor",
+		"command separted list of directories to skip when reporting coverage",
+	)
 
 	checkCmd.PersistentFlags().StringVarP(&ProfileFile, "profile-file", "p", "", "path to coverage profile file")
+
 	if err := checkCmd.MarkPersistentFlagRequired("profile-file"); err != nil {
 		log.Print(err)
 		os.Exit(1)
@@ -97,7 +116,11 @@ func init() {
 	cliOutput = cliLogger{}
 }
 
-func mapPackagesToFunctions(filePath string, projectFiles []string, fset *token.FileSet) map[string][]statements.Function {
+func mapPackagesToFunctions(
+	filePath string,
+	projectFiles []string,
+	fset *token.FileSet,
+) map[string][]statements.Function {
 	goPath := build.Default.GOPATH
 	goSrc := filepath.Join(goPath, "src")
 
@@ -113,6 +136,7 @@ func mapPackagesToFunctions(filePath string, projectFiles []string, fset *token.
 	}
 
 	packageToFunctions := make(map[string][]statements.Function)
+
 	for _, filePath := range projectFiles {
 		node, err := profile.NodeFromFilePath(filePath, goSrc, fset)
 		if err != nil {
@@ -125,6 +149,7 @@ func mapPackagesToFunctions(filePath string, projectFiles []string, fset *token.
 			log.Printf("could not collect functions for filepath %v %v", filePath, err)
 			os.Exit(1)
 		}
+
 		log.Debugf("functions for file %v %v", filePath, functions)
 		pkg := strings.TrimPrefix(filePath, fmt.Sprintf("%s/", filepath.Join(goPath, "src")))
 		pkg = filepath.Dir(pkg)
@@ -186,44 +211,88 @@ func filesForPath(dir string, ignoreDirs dirsToIgnore) ([]string, error) {
 
 func verifyCoverage(pkg config.ConfigPackage, cov float64) bool {
 	if pkg.MinCoveragePercentage > cov {
-		cliOutput.Printf("coverage %v%% for package %v did not meet minimum %v%%", cov, pkg.Name, pkg.MinCoveragePercentage)
+		cliOutput.Printf(
+			"coverage %v%% for package %v did not meet minimum %v%%",
+			cov,
+			pkg.Name,
+			pkg.MinCoveragePercentage,
+		)
+
 		return false
 	}
-	cliOutput.Printf("coverage %v%% for package %v meets minimum %v%%", cov, pkg.Name, pkg.MinCoveragePercentage)
+
+	cliOutput.Printf(
+		"coverage %v%% for package %v meets minimum %v%%",
+		cov,
+		pkg.Name,
+		pkg.MinCoveragePercentage,
+	)
+
 	return true
 }
 
 func printReport(functions []statements.Function) {
 	for _, function := range functions {
 		executedStatementsCount := 0
+
 		for _, s := range function.Statements {
 			if s.ExecutedCount > 0 {
 				executedStatementsCount++
 			}
 		}
+
 		v := (float64(executedStatementsCount) / float64(len(function.Statements))) * 10000
 		percent := (math.Floor(v) / 10000) * 100
-		cliOutput.Printf("function %v has %v statements of which %v were executed for a percent of %v", function.Name, len(function.Statements), executedStatementsCount, percent)
+		cliOutput.Printf(
+			"function %v has %v statements of which %v were executed for a percent of %v",
+			function.Name,
+			len(function.Statements),
+			executedStatementsCount,
+			percent,
+		)
 	}
 }
 
-func reportCoverage(packageToFunctions map[string][]statements.Function, printFunctions bool, configFile []byte) map[string]float64 {
-	pkgToCoverage := make(map[string]float64)
-	pc := analyzer.NewPackageCoverages(packageToFunctions)
+func reportPackageCoverages(
+	packageToFunctions map[string][]statements.Function,
+	pc *analyzer.PackageCoverages,
+	printFunctions bool,
+) {
 	for pkg := range packageToFunctions {
 		functions := packageToFunctions[pkg]
 		cov, ok := pc.Coverage(pkg)
+
 		if !ok {
 			log.Printf("could not get coverage for package %v", pkg)
 			os.Exit(1)
 		}
+
 		if printFunctions {
 			printReport(functions)
 		}
 
-		cliOutput.Printf("pkg %v coverage is %v%% (%v/%v statements)\n", pkg, cov.CoveragePercent, cov.ExecutedCount, cov.StatementCount)
+		cliOutput.Printf(
+			"pkg %v coverage is %v%% (%v/%v statements)\n",
+			pkg,
+			cov.CoveragePercent,
+			cov.ExecutedCount,
+			cov.StatementCount,
+		)
 	}
+}
+
+func reportCoverage(
+	packageToFunctions map[string][]statements.Function,
+	printFunctions bool,
+	configFile []byte,
+) map[string]float64 {
+	pkgToCoverage := make(map[string]float64)
+	pc := analyzer.NewPackageCoverages(packageToFunctions)
+
+	reportPackageCoverages(packageToFunctions, pc, printFunctions)
+
 	fail := false
+
 	for pkg := range packageToFunctions {
 		cov, ok := pc.Coverage(pkg)
 		if !ok {
@@ -232,14 +301,17 @@ func reportCoverage(packageToFunctions map[string][]statements.Function, printFu
 		}
 
 		var cfgPkg config.ConfigPackage
+
 		if len(configFile) != 0 {
 			cfg := config.ConfigFile{}
-			if err := yaml.Unmarshal([]byte(configFile), &cfg); err != nil {
+			if err := yaml.Unmarshal(configFile, &cfg); err != nil {
 				log.Printf("could not unmarshal yaml for config file %v", err)
 				os.Exit(1)
 			}
+
 			var ok bool
 			cfgPkg, ok = cfg.GetPackage(pkg)
+
 			if !ok {
 				continue
 			}
@@ -254,9 +326,11 @@ func reportCoverage(packageToFunctions map[string][]statements.Function, printFu
 			fail = true
 		}
 	}
+
 	if fail {
 		os.Exit(1)
 	}
+
 	return pkgToCoverage
 }
 
@@ -272,6 +346,7 @@ func setSrcPath(args []string) string {
 		srcPath = args[0]
 		log.Debugf("srcPath %v", srcPath)
 		absSrcPath, err := filepath.Abs(srcPath)
+
 		if err != nil {
 			log.Debugf("could not get absolute path from %v %v", srcPath, err)
 		} else {
@@ -279,12 +354,15 @@ func setSrcPath(args []string) string {
 			srcPath = absSrcPath
 		}
 	}
+
 	if srcPath == "" {
 		var err error
 		srcPath, err = os.Getwd()
+
 		if err != nil {
 			log.Debugf("could not get working directory %v", err)
 		}
 	}
+
 	return srcPath
 }
