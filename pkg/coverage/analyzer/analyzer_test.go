@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cvgw/gocheckcov/pkg/coverage/profile"
+	"github.com/cvgw/gocheckcov/pkg/coverage/parser/profile"
 	. "github.com/onsi/gomega"
 )
 

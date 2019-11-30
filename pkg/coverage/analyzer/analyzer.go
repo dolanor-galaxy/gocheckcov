@@ -22,8 +22,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cvgw/gocheckcov/pkg/coverage/functions"
-	"github.com/cvgw/gocheckcov/pkg/coverage/profile"
+	"github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser"
+	"github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser/functions"
+	"github.com/cvgw/gocheckcov/pkg/coverage/parser/profile"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/tools/cover"
 )
@@ -93,7 +94,7 @@ func MapPackagesToFunctions(
 	packageToFunctions := make(map[string][]profile.FunctionCoverage)
 
 	for _, filePath := range projectFiles {
-		node, err := profile.NodeFromFilePath(filePath, goSrc, fset)
+		node, err := goparser.NodeFromFilePath(filePath, goSrc, fset)
 		if err != nil {
 			log.Printf("could not retrieve node from filepath %v", err)
 			os.Exit(1)
@@ -111,10 +112,13 @@ func MapPackagesToFunctions(
 
 		var funcCoverages []profile.FunctionCoverage
 
+		p := profile.Parser{FilePath: filePath, Fset: fset}
+
 		if prof, ok := filePathToProfileMap[filePath]; ok {
-			p := profile.Parser{FilePath: filePath, Fset: fset, Profile: prof}
-			funcCoverages = p.RecordFunctionCoverage(functions)
+			p.Profile = prof
 		}
+
+		funcCoverages = p.RecordFunctionCoverage(functions)
 
 		packageToFunctions[pkg] = append(packageToFunctions[pkg], funcCoverages...)
 	}

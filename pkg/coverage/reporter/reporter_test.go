@@ -19,7 +19,7 @@ import (
 
 	"github.com/cvgw/gocheckcov/mocks/coverage/mock_reporter"
 	"github.com/cvgw/gocheckcov/pkg/coverage/config"
-	"github.com/cvgw/gocheckcov/pkg/coverage/profile"
+	"github.com/cvgw/gocheckcov/pkg/coverage/parser/profile"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
 )

@@ -17,14 +17,13 @@ package profile
 import (
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
-	"io/ioutil"
-	"log"
-	"path/filepath"
 
-	"github.com/cvgw/gocheckcov/pkg/coverage/functions"
+	"github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser"
+	"github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser/functions"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+
 	"golang.org/x/tools/cover"
 )
 
@@ -42,7 +41,7 @@ func NodesFromProfiles(goSrcPath string, profiles []*cover.Profile, fset *token.
 	filePathToNode := make(map[string]*ast.File)
 
 	for _, filePath := range filePaths {
-		node, err := NodeFromFilePath(filePath, goSrcPath, fset)
+		node, err := goparser.NodeFromFilePath(filePath, goSrcPath, fset)
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("could not get node from file path %v", filePath))
 		}
@@ -53,28 +52,11 @@ func NodesFromProfiles(goSrcPath string, profiles []*cover.Profile, fset *token.
 	return filePathToNode, nil
 }
 
-func NodeFromFilePath(filePath, goSrcPath string, fset *token.FileSet) (*ast.File, error) {
-	pFilePath := filepath.Join(goSrcPath, filePath)
-
-	src, err := ioutil.ReadFile(pFilePath)
-	if err != nil {
-		log.Printf("could not read file from profile %v %v", pFilePath, err)
-		return nil, err
-	}
-
-	f, err := parser.ParseFile(fset, pFilePath, src, 0)
-	if err != nil {
-		log.Printf("could not parse file %v %v", pFilePath, err)
-		return nil, err
-	}
-
-	return f, nil
-}
-
 type FunctionCoverage struct {
 	StatementCount int64
 	CoveredCount   int64
 	Name           string
+	Function       functions.Function
 }
 
 type Parser struct {
@@ -88,28 +70,24 @@ func (p Parser) RecordFunctionCoverage(functions []functions.Function) []Functio
 
 	for _, function := range functions {
 		fc := FunctionCoverage{
-			Name: function.Name,
+			Name:     function.Name,
+			Function: function,
 		}
 
-		for _, block := range p.Profile.Blocks {
-			startLine := function.StartLine
-			startCol := function.StartCol
-			endLine := function.EndLine
-			endCol := function.EndCol
+		if p.Profile != nil {
+			fc = p.recordCoverageHits(fc, function)
+		}
 
-			if block.StartLine > endLine || (block.StartLine == endLine && block.StartCol >= endCol) {
-				// Block starts after the function statement ends
-				continue
-			}
+		if int(fc.StatementCount) != len(function.Statements) {
+			log.Debugf(
+				"function %v statement counts don't match Profile: %v AST: %v",
+				function.Name,
+				fc.StatementCount,
+				len(function.Statements),
+			)
 
-			if block.EndLine < startLine || (block.EndLine == startLine && block.EndCol <= startCol) {
-				// Block ends before the function statement starts
-				continue
-			}
-
-			fc.StatementCount += int64(block.NumStmt)
-			if block.Count > 0 {
-				fc.CoveredCount += int64(block.NumStmt)
+			if int(fc.StatementCount) == 0 && len(function.Statements) > 0 {
+				fc.StatementCount = int64(len(function.Statements))
 			}
 		}
 
@@ -117,6 +95,32 @@ func (p Parser) RecordFunctionCoverage(functions []functions.Function) []Functio
 	}
 
 	return out
+}
+
+func (p Parser) recordCoverageHits(fc FunctionCoverage, function functions.Function) FunctionCoverage {
+	for _, block := range p.Profile.Blocks {
+		startLine := function.StartLine
+		startCol := function.StartCol
+		endLine := function.EndLine
+		endCol := function.EndCol
+
+		if block.StartLine > endLine || (block.StartLine == endLine && block.StartCol >= endCol) {
+			// Block starts after the function statement ends
+			continue
+		}
+
+		if block.EndLine < startLine || (block.EndLine == startLine && block.EndCol <= startCol) {
+			// Block ends before the function statement starts
+			continue
+		}
+
+		fc.StatementCount += int64(block.NumStmt)
+		if block.Count > 0 {
+			fc.CoveredCount += int64(block.NumStmt)
+		}
+	}
+
+	return fc
 }
 
 //func (p Parser) RecordStatementCoverage(functions []functions.Function) []functions.Function {

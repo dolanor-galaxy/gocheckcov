@@ -22,7 +22,7 @@ import (
 
 	"github.com/cvgw/gocheckcov/pkg/coverage/analyzer"
 	"github.com/cvgw/gocheckcov/pkg/coverage/config"
-	"github.com/cvgw/gocheckcov/pkg/coverage/profile"
+	"github.com/cvgw/gocheckcov/pkg/coverage/parser/profile"
 	"gopkg.in/yaml.v2"
 )
 
