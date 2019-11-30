@@ -4,6 +4,7 @@
 * [Status](#status)
 * [Description](#description)
 * [Usage](#usage)
+  * [Supported Golang Versions](#supported-golang-versions)
   * [Install](#install)
   * [Configuration](#configuration)
 * [Development](#development)
@@ -25,13 +26,18 @@ $ echo $?
 1
 ```
 
-## Install
-`go get github.com/cvgw/gocheckcov`
-
 ## Usage
 ```
 gocheckcov help
 ```
+
+### Supported Golang Versions
+* 1.11.x
+* 1.12.x
+* 1.13.x
+
+### Install
+`go get github.com/cvgw/gocheckcov`
 
 ### Configuration
 Specify minimum coverage for each package via a configuration file
