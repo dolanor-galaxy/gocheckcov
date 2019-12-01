@@ -15,48 +15,19 @@
 package profile
 
 import (
-	"fmt"
-	"go/ast"
 	"go/token"
 
-	"github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser"
 	"github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser/functions"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 
 	"golang.org/x/tools/cover"
 )
-
-func NodesFromProfiles(goSrcPath string, profiles []*cover.Profile, fset *token.FileSet) (map[string]*ast.File, error) {
-	filePaths := make([]string, 0)
-
-	for _, prof := range profiles {
-		if prof.FileName == "" {
-			return nil, fmt.Errorf("profile has a blank file name %v", prof)
-		}
-
-		filePaths = append(filePaths, prof.FileName)
-	}
-
-	filePathToNode := make(map[string]*ast.File)
-
-	for _, filePath := range filePaths {
-		node, err := goparser.NodeFromFilePath(filePath, goSrcPath, fset)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("could not get node from file path %v", filePath))
-		}
-
-		filePathToNode[filePath] = node
-	}
-
-	return filePathToNode, nil
-}
 
 type FunctionCoverage struct {
 	StatementCount int64
 	CoveredCount   int64
 	Name           string
 	Function       functions.Function
+	Profile        *cover.Profile
 }
 
 type Parser struct {
@@ -76,20 +47,21 @@ func (p Parser) RecordFunctionCoverage(functions []functions.Function) []Functio
 
 		if p.Profile != nil {
 			fc = p.recordCoverageHits(fc, function)
+			fc.Profile = p.Profile
 		}
 
-		if int(fc.StatementCount) != len(function.Statements) {
-			log.Debugf(
-				"function %v statement counts don't match Profile: %v AST: %v",
-				function.Name,
-				fc.StatementCount,
-				len(function.Statements),
-			)
+		//if int(fc.StatementCount) != len(function.Statements) {
+		//  log.Debugf(
+		//    "function %v statement counts don't match Profile: %v AST: %v",
+		//    function.Name,
+		//    fc.StatementCount,
+		//    len(function.Statements),
+		//  )
 
-			if int(fc.StatementCount) == 0 && len(function.Statements) > 0 {
-				fc.StatementCount = int64(len(function.Statements))
-			}
-		}
+		//  if int(fc.StatementCount) == 0 && len(function.Statements) > 0 {
+		//    fc.StatementCount = int64(len(function.Statements))
+		//  }
+		//}
 
 		out = append(out, fc)
 	}
@@ -122,37 +94,3 @@ func (p Parser) recordCoverageHits(fc FunctionCoverage, function functions.Funct
 
 	return fc
 }
-
-//func (p Parser) RecordStatementCoverage(functions []functions.Function) []functions.Function {
-//  for fIdx, function := range functions {
-//    statements := function.Statements
-//    for sIdx, statement := range statements {
-//      for _, block := range p.Profile.Blocks {
-//        startLine := statement.StartLine
-//        startCol := statement.StartCol
-//        endLine := statement.EndLine
-//        endCol := statement.EndCol
-
-//        if block.StartLine > endLine || (block.StartLine == endLine && block.StartCol >= endCol) {
-//          // Block starts after the function ends
-//          continue
-//        }
-
-//        if block.EndLine < startLine || (block.EndLine == startLine && block.EndCol <= startCol) {
-//          // Block ends before the function starts
-//          continue
-//        }
-
-//        statement.ExecutedCount += block.Count
-//        statements[sIdx] = statement
-
-//        break
-//      }
-//    }
-
-//    function.Statements = statements
-//    functions[fIdx] = function
-//  }
-
-//  return functions
-//}

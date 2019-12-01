@@ -15,13 +15,11 @@
 package cmd
 
 import (
-	"bufio"
 	"go/build"
 	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
-	"text/tabwriter"
 
 	log "github.com/sirupsen/logrus"
 
@@ -37,6 +35,7 @@ var (
 	configFile     string
 	ProfileFile    string
 	printFunctions bool
+	printSrc       bool
 	minCov         float64
 	skipDirs       string
 	checkCmd       = &cobra.Command{
@@ -86,31 +85,21 @@ func runCheckCommand(args []string) error {
 		}
 	}
 
-	out := bufio.NewWriter(os.Stdout)
+	cliL := reporter.NewCliTabLogger()
+	defer cliL.Close()
 
-	defer func() {
-		if err := out.Flush(); err != nil {
-			log.Debug(err)
-		}
-	}()
-
-	tabber := tabwriter.NewWriter(out, 1, 8, 1, '\t', 0)
-
-	defer func() {
-		if err := tabber.Flush(); err != nil {
-			log.Debug(err)
-		}
-	}()
-
-	cliL := &reporter.CliLogger{
-		Out: tabber,
+	if printSrc {
+		printFunctions = true
 	}
 
 	v := reporter.Verifier{
 		Out:            cliL,
 		PrintFunctions: printFunctions,
+		PrintSrc:       printSrc,
 		MinCov:         minCov,
+		GoSrcPath:      goSrc,
 	}
+
 	if _, err := v.ReportCoverage(packageToFunctions, printFunctions, cfContent); err != nil {
 		cliL.Printf("%v", err)
 		return err
@@ -123,6 +112,13 @@ func init() {
 	rootCmd.AddCommand(checkCmd)
 
 	checkCmd.Flags().BoolVar(&printFunctions, "print-functions", false, "print coverage for individual functions")
+
+	checkCmd.Flags().BoolVar(
+		&printSrc,
+		"print-src",
+		false,
+		"print src coverage for each function (print-functions automatically set to true)",
+	)
 
 	checkCmd.Flags().BoolVar(&noConfig, "no-config", false, "do not read configuration from file")
 

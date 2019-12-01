@@ -15,11 +15,11 @@
 package statements
 
 type Statement struct {
-	StartOffset   int
-	StartLine     int
-	StartCol      int
-	EndOffset     int
-	EndLine       int
-	EndCol        int
-	ExecutedCount int
+	StartOffset   int64
+	StartLine     int64
+	StartCol      int64
+	EndOffset     int64
+	EndLine       int64
+	EndCol        int64
+	ExecutedCount int64
 }

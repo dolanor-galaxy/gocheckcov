@@ -21,94 +21,93 @@ import (
 
 	"github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser"
 	"github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser/functions"
-	"github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser/statements"
 	. "github.com/onsi/gomega"
 	"golang.org/x/tools/cover"
 )
 
-func Test_NodesFromProfiles(t *testing.T) {
-	type testcase struct {
-		description    string
-		srcFile        string
-		srcFileContent string
-		expectErr      bool
-		profiles       []*cover.Profile
-	}
+//func Test_NodesFromProfiles(t *testing.T) {
+//  type testcase struct {
+//    description    string
+//    srcFile        string
+//    srcFileContent string
+//    expectErr      bool
+//    profiles       []*cover.Profile
+//  }
 
-	testCases := []testcase{
-		func() testcase {
-			filename := "src.go"
-			file, err := ioutil.TempFile("", filename)
-			if err != nil {
-				t.Errorf("could not create temp file")
-				t.FailNow()
-			}
+//  testCases := []testcase{
+//    func() testcase {
+//      filename := "src.go"
+//      file, err := ioutil.TempFile("", filename)
+//      if err != nil {
+//        t.Errorf("could not create temp file")
+//        t.FailNow()
+//      }
 
-			srcFileContent := `
-package foo
+//      srcFileContent := `
+//package foo
 
-func Meow(x, y int) bool {
-  if x > y {
-	  return true
-  }
-	return false
-}
-`
-			err = ioutil.WriteFile(file.Name(), []byte(srcFileContent), 0644)
+//func Meow(x, y int) bool {
+//  if x > y {
+//    return true
+//  }
+//  return false
+//}
+//`
+//      err = ioutil.WriteFile(file.Name(), []byte(srcFileContent), 0644)
 
-			if err != nil {
-				t.Errorf("could not write to temp file %v", err)
-				t.FailNow()
-			}
+//      if err != nil {
+//        t.Errorf("could not write to temp file %v", err)
+//        t.FailNow()
+//      }
 
-			return testcase{
-				description: "one profile with a valid src file",
-				srcFile:     "profile.test",
-				profiles: []*cover.Profile{
-					&cover.Profile{FileName: file.Name()},
-				},
-				srcFileContent: srcFileContent,
-			}
-		}(),
-		testcase{
-			description: "one profile with a blank file name",
-			srcFile:     "profile.test",
-			profiles: []*cover.Profile{
-				&cover.Profile{},
-			},
-			expectErr: true,
-		},
-		testcase{
-			description: "one profile with a bad file name",
-			srcFile:     "profile.test",
-			profiles: []*cover.Profile{
-				&cover.Profile{FileName: "meow"},
-			},
-			expectErr: true,
-		},
-	}
-	for i := range testCases {
-		tc := testCases[i]
-		t.Run(tc.description, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+//      return testcase{
+//        description: "one profile with a valid src file",
+//        srcFile:     "profile.test",
+//        profiles: []*cover.Profile{
+//          &cover.Profile{FileName: file.Name()},
+//        },
+//        srcFileContent: srcFileContent,
+//      }
+//    }(),
+//    testcase{
+//      description: "one profile with a blank file name",
+//      srcFile:     "profile.test",
+//      profiles: []*cover.Profile{
+//        &cover.Profile{},
+//      },
+//      expectErr: true,
+//    },
+//    testcase{
+//      description: "one profile with a bad file name",
+//      srcFile:     "profile.test",
+//      profiles: []*cover.Profile{
+//        &cover.Profile{FileName: "meow"},
+//      },
+//      expectErr: true,
+//    },
+//  }
+//  for i := range testCases {
+//    tc := testCases[i]
+//    t.Run(tc.description, func(t *testing.T) {
+//      g := NewGomegaWithT(t)
 
-			profiles := tc.profiles
+//      profiles := tc.profiles
 
-			fset := token.NewFileSet()
+//      fset := token.NewFileSet()
 
-			res, err := NodesFromProfiles("", profiles, fset)
-			if tc.expectErr {
-				g.Expect(err).ToNot(BeNil())
-				g.Expect(res).To(BeNil())
-			} else {
-				g.Expect(err).To(BeNil())
-				g.Expect(res).To(HaveLen(1))
-			}
-		})
-	}
-}
+//      res, err := NodesFromProfiles("", profiles, fset)
+//      if tc.expectErr {
+//        g.Expect(err).ToNot(BeNil())
+//        g.Expect(res).To(BeNil())
+//      } else {
+//        g.Expect(err).To(BeNil())
+//        g.Expect(res).To(HaveLen(1))
+//      }
+//    })
+//  }
+//}
 
-func Test_NodeFromProfile(t *testing.T) {
+func Test_NodeFromFilePath(t *testing.T) {
 	type testcase struct {
 		description    string
 		srcFile        string
@@ -193,6 +192,19 @@ func Test_Parser_RecordFunctionCoverage(t *testing.T) {
 		profile         *cover.Profile
 	}
 
+	profile := &cover.Profile{
+		Blocks: []cover.ProfileBlock{
+			cover.ProfileBlock{
+				StartLine: 3,
+				StartCol:  1,
+				EndLine:   5,
+				EndCol:    1,
+				Count:     4,
+				NumStmt:   10,
+			},
+		},
+	}
+
 	testCases := []testcase{
 		{
 			description: "empty list of functions, blank file path, and nil profile",
@@ -200,20 +212,11 @@ func Test_Parser_RecordFunctionCoverage(t *testing.T) {
 		{
 			description: "list of functions, blank file path, and nil profile",
 			functions: []functions.Function{
-				{
-					Statements: []statements.Statement{
-						statements.Statement{},
-					},
-				},
+				{},
 			},
 			expectCoverages: []FunctionCoverage{
 				FunctionCoverage{
-					StatementCount: 1,
-					Function: functions.Function{
-						Statements: []statements.Statement{
-							statements.Statement{},
-						},
-					},
+					Function: functions.Function{},
 				},
 			},
 		},
@@ -221,46 +224,24 @@ func Test_Parser_RecordFunctionCoverage(t *testing.T) {
 			description: "list of functions, blank file path, and non-matching profile",
 			profile:     &cover.Profile{},
 			functions: []functions.Function{
-				{
-					Statements: []statements.Statement{
-						statements.Statement{},
-					},
-				},
+				{},
 			},
 			expectCoverages: []FunctionCoverage{
 				FunctionCoverage{
-					StatementCount: 1,
-					Function: functions.Function{
-						Statements: []statements.Statement{
-							statements.Statement{},
-						},
-					},
+					Function: functions.Function{},
+					Profile:  &cover.Profile{},
 				},
 			},
 		},
 		{
 			description: "list of functions, blank file path, and matching profile",
-			profile: &cover.Profile{
-				Blocks: []cover.ProfileBlock{
-					cover.ProfileBlock{
-						StartLine: 3,
-						StartCol:  1,
-						EndLine:   5,
-						EndCol:    1,
-						Count:     4,
-						NumStmt:   10,
-					},
-				},
-			},
+			profile:     profile,
 			functions: []functions.Function{
 				{
 					StartLine: 2,
 					StartCol:  1,
 					EndLine:   10,
 					EndCol:    1,
-					Statements: []statements.Statement{
-						statements.Statement{},
-					},
 				},
 			},
 			expectCoverages: []FunctionCoverage{
@@ -272,10 +253,8 @@ func Test_Parser_RecordFunctionCoverage(t *testing.T) {
 						StartCol:  1,
 						EndLine:   10,
 						EndCol:    1,
-						Statements: []statements.Statement{
-							statements.Statement{},
-						},
 					},
+					Profile: profile,
 				},
 			},
 		},

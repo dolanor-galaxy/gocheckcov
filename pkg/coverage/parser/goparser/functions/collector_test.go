@@ -57,7 +57,7 @@ func Meow(x, y int) bool {
 		t.FailNow()
 	}
 
-	funcs, err := CollectFunctions(f, fset)
+	funcs, err := CollectFunctions(f, fset, file.Name())
 	g.Expect(err).To(BeNil())
 	g.Expect(funcs).ToNot(BeNil())
 	g.Expect(funcs).To(HaveLen(1))

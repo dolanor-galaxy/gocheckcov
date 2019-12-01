@@ -237,78 +237,6 @@ packages:
 	}
 }
 
-func Test_Verifier_ReportPackageCoverages(t *testing.T) {
-	type testcase struct {
-		verifier   *Verifier
-		input      map[string][]profile.FunctionCoverage
-		covs       *analyzer.PackageCoverages
-		printFuncs bool
-		expectErr  bool
-	}
-
-	type tcFn func(*gomock.Controller) testcase
-
-	testCases := map[string]tcFn{
-		"empty function map and nil coverage data": func(ctrl *gomock.Controller) testcase {
-			mockLogger := mock_reporter.NewMocklogger(ctrl)
-
-			return testcase{
-				verifier: &Verifier{Out: mockLogger},
-				input:    map[string][]profile.FunctionCoverage{},
-			}
-		},
-		"one empty function": func(ctrl *gomock.Controller) testcase {
-			mockLogger := mock_reporter.NewMocklogger(ctrl)
-			mockLogger.EXPECT().Printf(gomock.Any(), gomock.Any()).Times(1)
-
-			return testcase{
-				verifier: &Verifier{Out: mockLogger},
-				input: map[string][]profile.FunctionCoverage{
-					"baz": []profile.FunctionCoverage{
-						profile.FunctionCoverage{},
-					},
-				},
-				covs: analyzer.NewPackageCoverages(map[string][]profile.FunctionCoverage{
-					"baz": []profile.FunctionCoverage{},
-				}),
-			}
-		},
-		"one function with one statement not in coverage data": func(ctrl *gomock.Controller) testcase {
-			mockLogger := mock_reporter.NewMocklogger(ctrl)
-
-			return testcase{
-				verifier: &Verifier{Out: mockLogger},
-				input: map[string][]profile.FunctionCoverage{
-					"foo/bar": []profile.FunctionCoverage{
-						{CoveredCount: 1, StatementCount: 1},
-					},
-				},
-				covs:      &analyzer.PackageCoverages{},
-				expectErr: true,
-			}
-		},
-	}
-
-	for description := range testCases {
-		description := description
-
-		t.Run(description, func(t *testing.T) {
-			g := NewGomegaWithT(t)
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			tc := testCases[description](ctrl)
-			v := tc.verifier
-			err := v.ReportPackageCoverages(tc.input, tc.covs, tc.printFuncs)
-			if tc.expectErr {
-				g.Expect(err).ToNot(BeNil())
-			} else {
-				g.Expect(err).To(BeNil())
-			}
-		})
-	}
-}
-
 func Test_Verifier_PrintReport(t *testing.T) {
 	type testcase struct {
 		verifier  *Verifier
@@ -320,7 +248,7 @@ func Test_Verifier_PrintReport(t *testing.T) {
 	testCases := map[string]tcFn{
 		"empty function list": func(ctrl *gomock.Controller) testcase {
 			mockLogger := mock_reporter.NewMocklogger(ctrl)
-
+			mockLogger.EXPECT().Printf(gomock.Any()).Times(1)
 			return testcase{
 				verifier:  &Verifier{Out: mockLogger},
 				functions: []profile.FunctionCoverage{},
@@ -328,7 +256,7 @@ func Test_Verifier_PrintReport(t *testing.T) {
 		},
 		"one empty function": func(ctrl *gomock.Controller) testcase {
 			mockLogger := mock_reporter.NewMocklogger(ctrl)
-			mockLogger.EXPECT().Printf(gomock.Any(), gomock.Any()).Times(1)
+			mockLogger.EXPECT().Printf(gomock.Any(), gomock.Any()).MinTimes(1)
 
 			return testcase{
 				verifier: &Verifier{Out: mockLogger},
@@ -339,7 +267,7 @@ func Test_Verifier_PrintReport(t *testing.T) {
 		},
 		"one function with one statement": func(ctrl *gomock.Controller) testcase {
 			mockLogger := mock_reporter.NewMocklogger(ctrl)
-			mockLogger.EXPECT().Printf(gomock.Any(), gomock.Any()).Times(1)
+			mockLogger.EXPECT().Printf(gomock.Any(), gomock.Any()).MinTimes(1)
 
 			return testcase{
 				verifier: &Verifier{Out: mockLogger},
@@ -359,7 +287,7 @@ func Test_Verifier_PrintReport(t *testing.T) {
 
 			tc := testCases[description](ctrl)
 			v := tc.verifier
-			v.PrintReport(tc.functions)
+			v.PrintFunctionReport(tc.functions)
 		})
 	}
 }

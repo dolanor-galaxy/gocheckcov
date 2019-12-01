@@ -14,11 +14,9 @@
 
 package functions
 
-import "github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser/statements"
-
 type Function struct {
 	Name        string
-	Statements  []statements.Statement
+	SrcPath     string
 	StartOffset int
 	StartLine   int
 	StartCol    int

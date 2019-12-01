@@ -36,6 +36,7 @@ type coverage struct {
 	StatementCount  int64
 	ExecutedCount   int64
 	CoveragePercent float64
+	Functions       []profile.FunctionCoverage
 }
 
 func (p *PackageCoverages) Coverage(pkg string) (coverage, bool) {
@@ -64,7 +65,12 @@ func NewPackageCoverages(packagesToFunctions map[string][]profile.FunctionCovera
 			covPer = math.Floor((float64(executedCount)/float64(statementCount))*10000) / 100
 		}
 
-		c := coverage{StatementCount: statementCount, ExecutedCount: executedCount, CoveragePercent: covPer}
+		c := coverage{
+			StatementCount:  statementCount,
+			ExecutedCount:   executedCount,
+			CoveragePercent: covPer,
+			Functions:       functions,
+		}
 		pkgToCoverage[pkg] = c
 	}
 
@@ -99,7 +105,7 @@ func MapPackagesToFunctions(
 			return nil, e
 		}
 
-		functions, err := functions.CollectFunctions(node, fset)
+		functions, err := functions.CollectFunctions(node, fset, filePath)
 		if err != nil {
 			e := fmt.Errorf("could not collect functions for filepath %v %v", filePath, err)
 			return nil, e

@@ -18,81 +18,38 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser/statements"
 	log "github.com/sirupsen/logrus"
 )
 
-type visitor struct {
-	err       error
-	fset      *token.FileSet
-	functions []Function
-}
+func CollectFunctions(f *ast.File, fset *token.FileSet, filePath string) ([]Function, error) {
+	functions := []Function{}
 
-func (v *visitor) Visit(n ast.Node) ast.Visitor {
-	switch x := n.(type) {
-	case *ast.FuncDecl:
-		body := x.Body
-		name := x.Name.Name
+	for i := range f.Decls {
+		switch x := f.Decls[i].(type) {
+		case *ast.FuncDecl:
+			name := x.Name.Name
 
-		start := v.fset.Position(n.Pos())
-		end := v.fset.Position(n.End())
-		startLine := start.Line
-		startCol := start.Column
-		endLine := end.Line
-		endCol := end.Column
-		f := Function{
-			Name:      name,
-			StartLine: startLine,
-			StartCol:  startCol,
-			EndLine:   endLine,
-			EndCol:    endCol,
-		}
-
-		sc := &statements.StmtCollector{}
-		if err := sc.Collect(body, v.fset); err != nil {
-			v.err = err
-			return nil
-		}
-
-		stmts := sc.Statements
-
-		log.Debugf("%v statements %v", f.Name, stmts)
-
-		convertedStmts := make([]statements.Statement, 0, len(stmts))
-
-		for _, stmnt := range stmts {
-			start := v.fset.Position(stmnt.Pos())
-			end := v.fset.Position(stmnt.End())
+			start := fset.Position(x.Pos())
+			end := fset.Position(x.End())
 			startLine := start.Line
 			startCol := start.Column
 			endLine := end.Line
 			endCol := end.Column
-			s := statements.Statement{
-				StartLine: startLine,
-				StartCol:  startCol,
-				EndLine:   endLine,
-				EndCol:    endCol,
+			f := Function{
+				Name:        name,
+				StartLine:   startLine,
+				StartCol:    startCol,
+				EndLine:     endLine,
+				EndCol:      endCol,
+				SrcPath:     filePath,
+				StartOffset: start.Offset,
+				EndOffset:   end.Offset,
 			}
-			convertedStmts = append(convertedStmts, s)
+			functions = append(functions, f)
 		}
-
-		f.Statements = convertedStmts
-		v.functions = append(v.functions, f)
-	default:
 	}
 
-	return v
-}
+	log.Debugf("found functions %v", functions)
 
-func CollectFunctions(f *ast.File, fset *token.FileSet) ([]Function, error) {
-	v := &visitor{fset: fset}
-	ast.Walk(v, f)
-
-	if v.err != nil {
-		return nil, v.err
-	}
-
-	log.Debugf("visitor functions %v", v.functions)
-
-	return v.functions, nil
+	return functions, nil
 }
