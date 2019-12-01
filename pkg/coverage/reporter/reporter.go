@@ -16,6 +16,7 @@ package reporter
 
 import (
 	"fmt"
+	"io"
 	"math"
 
 	"github.com/pkg/errors"
@@ -27,10 +28,19 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type CliLogger struct{}
+type CliLogger struct {
+	Out io.Writer
+}
 
 func (l CliLogger) Printf(fmtString string, args ...interface{}) {
-	fmt.Println(fmt.Sprintf(fmtString, args...))
+	if l.Out == nil {
+		fmt.Println(fmt.Sprintf(fmtString, args...))
+		return
+	}
+
+	if _, err := fmt.Fprintf(l.Out, fmtString, args...); err != nil {
+		panic(fmt.Errorf("could not write to output %v", err))
+	}
 }
 
 type logger interface {
@@ -43,26 +53,36 @@ type Verifier struct {
 	PrintFunctions bool
 }
 
-func (v Verifier) VerifyCoverage(pkg config.ConfigPackage, cov float64) bool {
-	if pkg.MinCoveragePercentage > cov {
-		v.Out.Printf(
-			"coverage %v%% for package %v did not meet minimum %v%%",
-			cov,
-			pkg.Name,
-			pkg.MinCoveragePercentage,
-		)
+func (v Verifier) VerifyCoverage(pkg config.ConfigPackage, pc *analyzer.PackageCoverages) (bool, error) {
+	if pc == nil {
+		err := fmt.Errorf("can't report coverages because coverage data is nil")
+		log.Debug(err)
 
-		return false
+		return false, err
 	}
 
+	cov, ok := pc.Coverage(pkg.Name)
+
+	if !ok {
+		err := fmt.Errorf("could not get coverage for package %v", pkg)
+		log.Debug(err)
+
+		return false, err
+	}
 	v.Out.Printf(
-		"coverage %v%% for package %v meets minimum %v%%",
-		cov,
+		"pkg %v\tcoverage %v%% \tminimum %v%% \tstatements\t%v/%v\n",
 		pkg.Name,
+		cov.CoveragePercent,
 		pkg.MinCoveragePercentage,
+		cov.ExecutedCount,
+		cov.StatementCount,
 	)
 
-	return true
+	if pkg.MinCoveragePercentage > cov.CoveragePercent {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func (v Verifier) PrintReport(functions []profile.FunctionCoverage) {
@@ -112,7 +132,7 @@ func (v Verifier) ReportPackageCoverages(
 		}
 
 		v.Out.Printf(
-			"pkg %v coverage is %v%% (%v/%v statements)\n",
+			"pkg %v\tcoverage %v%%\tstatements\t%v/%v\n",
 			pkg,
 			cov.CoveragePercent,
 			cov.ExecutedCount,
@@ -131,21 +151,9 @@ func (v Verifier) ReportCoverage(
 	pkgToCoverage := make(map[string]float64)
 	pc := analyzer.NewPackageCoverages(packageToFunctions)
 
-	err := v.ReportPackageCoverages(packageToFunctions, pc, printFunctions)
-	if err != nil {
-		return nil, err
-	}
-
 	fail := false
 
 	for pkg := range packageToFunctions {
-		cov, ok := pc.Coverage(pkg)
-		if !ok {
-			err := fmt.Errorf("could not get coverage for package %v", pkg)
-			log.Debug(err)
-
-			return nil, err
-		}
 
 		var cfgPkg config.ConfigPackage
 
@@ -174,7 +182,12 @@ func (v Verifier) ReportCoverage(
 			}
 		}
 
-		if ok := v.VerifyCoverage(cfgPkg, cov.CoveragePercent); !ok {
+		ok, err := v.VerifyCoverage(cfgPkg, pc)
+		if err != nil {
+			return nil, err
+		}
+
+		if !ok {
 			fail = true
 		}
 	}

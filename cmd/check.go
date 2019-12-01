@@ -15,12 +15,14 @@
 package cmd
 
 import (
+	"bufio"
 	"go/build"
 	"go/token"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+	"text/tabwriter"
 
 	log "github.com/sirupsen/logrus"
 
@@ -69,13 +71,31 @@ var (
 				if configFile == "" {
 					configFile = defaultConfigPath
 				}
-				cfContent, err = ioutil.ReadFile(configFile)
+
+				_, err := os.Stat(configFile)
 				if err != nil {
-					log.Printf("could not read config file %v %v", configFile, err)
-					os.Exit(1)
+					if !os.IsNotExist(err) {
+						log.Printf("config file does not exist %v %v", configFile, err)
+						os.Exit(1)
+					}
+				} else {
+					cfContent, err = ioutil.ReadFile(configFile)
+					if err != nil {
+						log.Printf("could not read config file %v %v", configFile, err)
+						os.Exit(1)
+					}
 				}
 			}
-			cliL := reporter.CliLogger{}
+
+			out := bufio.NewWriter(os.Stdout)
+			defer out.Flush()
+
+			tabber := tabwriter.NewWriter(out, 1, 8, 1, '\t', 0)
+			defer tabber.Flush()
+
+			cliL := reporter.CliLogger{
+				Out: tabber,
+			}
 			v := reporter.Verifier{
 				Out:            cliL,
 				PrintFunctions: printFunctions,
