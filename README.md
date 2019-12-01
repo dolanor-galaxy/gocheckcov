@@ -85,6 +85,36 @@ gocheckcov will search for a configuration file `.gocheckcov-config.yml` at the 
 
 You can also specify the path to a configuration file using the `--config-file` option.
 
+#### Print out source and coverage for each function
+gocheckcov can optionally print out the source and coverage for each function by using the `--print-src` flag. 
+
+Statements covered are colored green, statements uncovered are colored red, and source which is not applicable to coverage is color white.
+```
+$ gocheckcov check --profile-file ${coverprofile_path} --print-src
+
+  func handleIfStmt       coverage 77.77%                 statements      7/9
+
+  func (sc *StmtCollector) handleIfStmt(s *ast.IfStmt, fset *token.FileSet) error {
+          if s.Init != nil {
+                  if err := sc.Collect(s.Init, fset); err != nil {
+                          return err
+                  }
+          }
+
+          if err := sc.Collect(s.Body, fset); err != nil {
+                  return err
+          }
+
+          if s.Else != nil {
+                  if err := sc.handleIfStmtElse(s, fset); err != nil {
+                          return err
+                  }
+          }
+          
+          return nil
+  }
+```
+
 ### Initialize A New Configuration File Using Current Coverage Percentages
 ```
 $ gocheckcov check init --profile-file ${coverprofile_path}
