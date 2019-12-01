@@ -69,6 +69,7 @@ func (v Verifier) VerifyCoverage(pkg config.ConfigPackage, pc *analyzer.PackageC
 
 		return false, err
 	}
+
 	v.Out.Printf(
 		"pkg %v\tcoverage %v%% \tminimum %v%% \tstatements\t%v/%v\n",
 		pkg.Name,
@@ -154,7 +155,6 @@ func (v Verifier) ReportCoverage(
 	fail := false
 
 	for pkg := range packageToFunctions {
-
 		var cfgPkg config.ConfigPackage
 
 		if len(configFile) != 0 {

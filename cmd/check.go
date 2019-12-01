@@ -88,10 +88,18 @@ var (
 			}
 
 			out := bufio.NewWriter(os.Stdout)
-			defer out.Flush()
+			defer func() {
+				if err := out.Flush(); err != nil {
+					log.Debug(err)
+				}
+			}()
 
 			tabber := tabwriter.NewWriter(out, 1, 8, 1, '\t', 0)
-			defer tabber.Flush()
+			defer func() {
+				if err := tabber.Flush(); err != nil {
+					log.Debug(err)
+				}
+			}()
 
 			cliL := reporter.CliLogger{
 				Out: tabber,

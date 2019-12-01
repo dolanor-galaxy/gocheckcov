@@ -29,34 +29,42 @@ func Test_Verifier_VerifyCoverage(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	type testcase struct {
-		description string
-		verifier    *Verifier
-		pkg         config.ConfigPackage
-		result      bool
+		verifier  *Verifier
+		pkg       config.ConfigPackage
+		coverages *analyzer.PackageCoverages
+		result    bool
+		expectErr bool
 	}
 
 	type tcFn func(*gomock.Controller) testcase
 
-	testCases := []tcFn{
-		func(ctrl *gomock.Controller) testcase {
+	testCases := map[string]tcFn{
+		"empty package and coverages": func(ctrl *gomock.Controller) testcase {
 			mockLogger := mock_reporter.NewMocklogger(ctrl)
-			mockLogger.EXPECT().Printf(gomock.Any(), gomock.Any()).Times(1)
 
 			return testcase{
-				description: "empty package",
-				verifier:    &Verifier{Out: mockLogger},
-				pkg:         config.ConfigPackage{},
-				result:      true,
+				verifier:  &Verifier{Out: mockLogger},
+				coverages: &analyzer.PackageCoverages{},
+				pkg:       config.ConfigPackage{},
+				expectErr: true,
 			}
 		},
-		func(ctrl *gomock.Controller) testcase {
+		"cov is less than pkg min": func(ctrl *gomock.Controller) testcase {
 			mockLogger := mock_reporter.NewMocklogger(ctrl)
 			mockLogger.EXPECT().Printf(gomock.Any(), gomock.Any()).Times(1)
 
 			return testcase{
-				description: "cov is less than pkg min",
-				verifier:    &Verifier{Out: mockLogger},
+				verifier: &Verifier{Out: mockLogger},
+				coverages: analyzer.NewPackageCoverages(map[string][]profile.FunctionCoverage{
+					"foo/bar": []profile.FunctionCoverage{
+						{
+							CoveredCount:   10,
+							StatementCount: 100,
+						},
+					},
+				}),
 				pkg: config.ConfigPackage{
+					Name:                  "foo/bar",
 					MinCoveragePercentage: 100,
 				},
 			}
@@ -64,17 +72,22 @@ func Test_Verifier_VerifyCoverage(t *testing.T) {
 	}
 
 	for i := range testCases {
-		ctrl := gomock.NewController(t)
+		i := i
+		t.Run(i, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-		// Assert that Bar() is invoked.
-		defer ctrl.Finish()
+			tc := testCases[i](ctrl)
 
-		tc := testCases[i](ctrl)
-		t.Run(tc.description, func(t *testing.T) {
 			v := tc.verifier
 			pkg := tc.pkg
-			ok := v.VerifyCoverage(pkg, 0)
-			g.Expect(ok).To(Equal(tc.result))
+			ok, err := v.VerifyCoverage(pkg, tc.coverages)
+			if tc.expectErr {
+				g.Expect(err).ToNot(BeNil())
+			} else {
+				g.Expect(err).To(BeNil())
+				g.Expect(ok).To(Equal(tc.result))
+			}
 		})
 	}
 }
@@ -190,8 +203,6 @@ packages:
 		},
 		"one function with one statement with a bad config file": func(ctrl *gomock.Controller) testcase {
 			mockLogger := mock_reporter.NewMocklogger(ctrl)
-
-			mockLogger.EXPECT().Printf(gomock.Any(), gomock.Any()).MinTimes(1)
 
 			return testcase{
 				verifier: &Verifier{Out: mockLogger},
