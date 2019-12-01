@@ -1,6 +1,6 @@
 # gocheckcov
 ![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/cvgw/gocheckcov/Go/master?style=plastic)
-![Coveralls github branch](https://img.shields.io/coveralls/github/cvgw/gocheckcov/master?style=plastic)
+[![Coveralls github branch](https://img.shields.io/coveralls/github/cvgw/gocheckcov/master?style=plastic)](https://coveralls.io/github/cvgw/gocheckcov?branch=master)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/cvgw/gocheckcov?style=plastic)
 [![license](https://img.shields.io/github/license/cvgw/gocheckcov?style=plastic)](./LICENSE)
 
