@@ -39,8 +39,18 @@ func Test_SetSrcPath(t *testing.T) {
 	testCases := []testcase{
 		testcase{
 			description: "relative path with ...",
+			args:        []string{"./pkg/..."},
+			expected:    filepath.Join(cwd, "pkg", "..."),
+		},
+		testcase{
+			description: "relative path",
 			args:        []string{"./pkg"},
 			expected:    filepath.Join(cwd, "pkg"),
+		},
+		testcase{
+			description: "relative path",
+			args:        []string{},
+			expected:    filepath.Join(cwd, "..."),
 		},
 	}
 
