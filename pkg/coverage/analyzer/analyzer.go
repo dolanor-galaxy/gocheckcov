@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"go/token"
 	"math"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -79,11 +78,11 @@ func MapPackagesToFunctions(
 	projectFiles []string,
 	fset *token.FileSet,
 	goSrc string,
-) map[string][]profile.FunctionCoverage {
+) (map[string][]profile.FunctionCoverage, error) {
 	profiles, err := cover.ParseProfiles(filePath)
 	if err != nil {
-		log.Printf("could not parse profiles from %v %v", filePath, err)
-		os.Exit(1)
+		e := fmt.Errorf("could not parse profiles from %v %v", filePath, err)
+		return nil, e
 	}
 
 	filePathToProfileMap := make(map[string]*cover.Profile)
@@ -96,14 +95,14 @@ func MapPackagesToFunctions(
 	for _, filePath := range projectFiles {
 		node, err := goparser.NodeFromFilePath(filePath, goSrc, fset)
 		if err != nil {
-			log.Printf("could not retrieve node from filepath %v", err)
-			os.Exit(1)
+			e := fmt.Errorf("could not retrieve node from filepath %v", err)
+			return nil, e
 		}
 
 		functions, err := functions.CollectFunctions(node, fset)
 		if err != nil {
-			log.Printf("could not collect functions for filepath %v %v", filePath, err)
-			os.Exit(1)
+			e := fmt.Errorf("could not collect functions for filepath %v %v", filePath, err)
+			return nil, e
 		}
 
 		log.Debugf("functions for file %v %v", filePath, functions)
@@ -125,5 +124,5 @@ func MapPackagesToFunctions(
 
 	log.Debugf("map of packages to functions %v", packageToFunctions)
 
-	return packageToFunctions
+	return packageToFunctions, nil
 }

@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"go/token"
 	"io/ioutil"
-	"log"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -28,14 +27,38 @@ import (
 )
 
 func Test_NewPackageCoverages(t *testing.T) {
-	g := NewGomegaWithT(t)
-
-	pkgToFuncs := map[string][]profile.FunctionCoverage{
-		"github.com/foo/bar/pkg/baz": []profile.FunctionCoverage{},
+	type testcase struct {
+		pkgFuncMap map[string][]profile.FunctionCoverage
 	}
 
-	p := NewPackageCoverages(pkgToFuncs)
-	g.Expect(p).ToNot(BeNil())
+	testCases := map[string]testcase{
+		"one pkg no coverage data": testcase{
+			pkgFuncMap: map[string][]profile.FunctionCoverage{
+				"github.com/foo/bar/pkg/baz": []profile.FunctionCoverage{},
+			},
+		},
+		"one pkg with coverage data": testcase{
+			pkgFuncMap: map[string][]profile.FunctionCoverage{
+				"github.com/foo/bar/pkg/baz": []profile.FunctionCoverage{
+					profile.FunctionCoverage{
+						StatementCount: 10,
+						CoveredCount:   10,
+					},
+				},
+			},
+		},
+	}
+
+	for desc := range testCases {
+		desc := desc
+		t.Run(desc, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			tc := testCases[desc]
+
+			p := NewPackageCoverages(tc.pkgFuncMap)
+			g.Expect(p).ToNot(BeNil())
+		})
+	}
 }
 
 func Test_PackageCoverages_Coverage(t *testing.T) {
@@ -52,15 +75,22 @@ func Test_PackageCoverages_Coverage(t *testing.T) {
 }
 
 func Test_MapPackagesToFunctions(t *testing.T) {
-	g := NewGomegaWithT(t)
-
-	dir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		t.Errorf("could not create temp dir")
-		t.FailNow()
+	type testcase struct {
+		srcPath   string
+		covPath   string
+		dir       string
+		expectErr bool
 	}
 
-	profileFileContent := `
+	testCases := map[string]testcase{
+		"valid profile": func() testcase {
+			dir, err := ioutil.TempDir("", "test")
+			if err != nil {
+				t.Errorf("could not create temp dir")
+				t.FailNow()
+			}
+
+			profileFileContent := `
 package foo
 
 func Meow(x, y int) bool {
@@ -70,29 +100,85 @@ func Meow(x, y int) bool {
 	return false
 }
 `
-	goSrcPath := filepath.Join(dir, "src.go")
+			goSrcPath := filepath.Join(dir, "src.go")
 
-	err = ioutil.WriteFile(goSrcPath, []byte(profileFileContent), 0644)
-	if err != nil {
-		t.Errorf("could not write to temp file %v", err)
-		t.FailNow()
+			err = ioutil.WriteFile(goSrcPath, []byte(profileFileContent), 0644)
+			if err != nil {
+				t.Errorf("could not write to temp file %v", err)
+				t.FailNow()
+			}
+
+			profilePath := filepath.Join(dir, "profile.out")
+
+			coverageContent := fmt.Sprintf(
+				"mode: set\ngithub.com/cvgw/cov-analyzer/pkg/" +
+					"coverage/config/config.go:21.66,22.31 1 1")
+
+			err = ioutil.WriteFile(profilePath, []byte(coverageContent), 0644)
+
+			if err != nil {
+				t.Errorf("could not write to temp file %v", err)
+				t.FailNow()
+			}
+
+			return testcase{
+				srcPath: goSrcPath,
+				covPath: profilePath,
+				dir:     dir,
+			}
+		}(),
+		"invalid profile": func() testcase {
+			dir, err := ioutil.TempDir("", "test")
+			if err != nil {
+				t.Errorf("could not create temp dir")
+				t.FailNow()
+			}
+
+			profileFileContent := `
+package foo
+
+func Meow(x, y int) bool {
+  if x > y {
+	  return true
+  }
+	return false
+}
+`
+			goSrcPath := filepath.Join(dir, "src.go")
+
+			err = ioutil.WriteFile(goSrcPath, []byte(profileFileContent), 0644)
+			if err != nil {
+				t.Errorf("could not write to temp file %v", err)
+				t.FailNow()
+			}
+
+			return testcase{
+				srcPath:   goSrcPath,
+				covPath:   "foo.out",
+				dir:       dir,
+				expectErr: true,
+			}
+		}(),
 	}
 
-	profilePath := filepath.Join(dir, "profile.out")
+	for desc := range testCases {
+		desc := desc
+		t.Run(desc, func(t *testing.T) {
+			g := NewGomegaWithT(t)
 
-	coverageContent := fmt.Sprintf("mode: set\ngithub.com/cvgw/cov-analyzer/pkg/coverage/config/config.go:21.66,22.31 1 1")
-	log.Print(coverageContent)
-	err = ioutil.WriteFile(profilePath, []byte(coverageContent), 0644)
+			tc := testCases[desc]
 
-	if err != nil {
-		t.Errorf("could not write to temp file %v", err)
-		t.FailNow()
+			fset := token.NewFileSet()
+
+			res, err := MapPackagesToFunctions(tc.covPath, []string{tc.srcPath}, fset, "")
+			if tc.expectErr {
+				g.Expect(err).ToNot(BeNil())
+			} else {
+				g.Expect(err).To(BeNil())
+				g.Expect(res).ToNot(BeNil())
+				g.Expect(res).To(HaveLen(1))
+				g.Expect(res).To(HaveKey(strings.TrimPrefix(tc.dir, "/")))
+			}
+		})
 	}
-
-	fset := token.NewFileSet()
-
-	res := MapPackagesToFunctions(profilePath, []string{goSrcPath}, fset, "")
-	g.Expect(res).ToNot(BeNil())
-	g.Expect(res).To(HaveLen(1))
-	g.Expect(res).To(HaveKey(strings.TrimPrefix(dir, "/")))
 }

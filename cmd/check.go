@@ -70,7 +70,12 @@ func runCheckCommand(args []string) error {
 	profilePath := ProfileFile
 	fset := token.NewFileSet()
 	goSrc := filepath.Join(build.Default.GOPATH, "src")
-	packageToFunctions := analyzer.MapPackagesToFunctions(profilePath, projectFiles, fset, goSrc)
+
+	packageToFunctions, err := analyzer.MapPackagesToFunctions(profilePath, projectFiles, fset, goSrc)
+	if err != nil {
+		log.Print(err)
+		return err
+	}
 
 	var cfContent []byte
 	if !noConfig {

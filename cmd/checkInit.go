@@ -50,7 +50,13 @@ var checkInitCmd = &cobra.Command{
 		}
 
 		goSrc := filepath.Join(build.Default.GOPATH, "src")
-		packageToFunctions := analyzer.MapPackagesToFunctions(profilePath, projectFiles, fset, goSrc)
+
+		packageToFunctions, err := analyzer.MapPackagesToFunctions(profilePath, projectFiles, fset, goSrc)
+		if err != nil {
+			log.Print(err)
+			os.Exit(1)
+		}
+
 		pc := analyzer.NewPackageCoverages(packageToFunctions)
 
 		configFile := config.ConfigFile{}
