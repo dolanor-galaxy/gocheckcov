@@ -15,10 +15,96 @@
 package config
 
 import (
+	"io/ioutil"
 	"testing"
 
 	. "github.com/onsi/gomega"
 )
+
+func Test_GetConfigFile(t *testing.T) {
+	type testcase struct {
+		path      string
+		expectErr bool
+		content   []byte
+	}
+
+	testCases := map[string]testcase{
+		"blank config path": func() testcase {
+			tc := testcase{}
+			return tc
+		}(),
+		"bad config path": func() testcase {
+			tc := testcase{
+				path:      "foo.yml",
+				expectErr: true,
+			}
+
+			return tc
+		}(),
+		"bad config file": func() testcase {
+			fi, err := ioutil.TempFile("", "foo.yml")
+			if err != nil {
+				t.Errorf("could not create tempfile %v", err)
+				t.FailNow()
+			}
+
+			content := []byte("meow")
+
+			if err := ioutil.WriteFile(fi.Name(), content, 0777); err != nil {
+				t.Errorf("could not write to tempfile %v", err)
+				t.FailNow()
+			}
+
+			tc := testcase{
+				path:    fi.Name(),
+				content: content,
+			}
+
+			return tc
+		}(),
+		"good config file": func() testcase {
+			fi, err := ioutil.TempFile("", "foo.yml")
+			if err != nil {
+				t.Errorf("could not create tempfile %v", err)
+				t.FailNow()
+			}
+
+			content := []byte(`
+min_coverage_percentage: 10
+`)
+			if err := ioutil.WriteFile(
+				fi.Name(),
+				content,
+				0777,
+			); err != nil {
+				t.Errorf("could not write to tempfile %v", err)
+				t.FailNow()
+			}
+
+			tc := testcase{
+				path:    fi.Name(),
+				content: content,
+			}
+
+			return tc
+		}(),
+	}
+
+	for desc := range testCases {
+		desc := desc
+		t.Run(desc, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			tc := testCases[desc]
+			content, err := GetConfigFile(tc.path)
+			if tc.expectErr {
+				g.Expect(err).ToNot(BeNil())
+			} else {
+				g.Expect(err).To(BeNil())
+				g.Expect(content).To(Equal(tc.content))
+			}
+		})
+	}
+}
 
 func Test_ConfigFile_GetPackage(t *testing.T) {
 	g := NewGomegaWithT(t)

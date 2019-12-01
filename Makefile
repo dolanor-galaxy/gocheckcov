@@ -1,7 +1,7 @@
 default: check-license test lint
 
 test:
-	go test ./...
+	go test ./... -coverprofile=cp.out
 
 lint:
 	golangci-lint run
