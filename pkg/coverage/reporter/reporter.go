@@ -32,7 +32,7 @@ type CliLogger struct {
 	Out io.Writer
 }
 
-func (l CliLogger) Printf(fmtString string, args ...interface{}) {
+func (l *CliLogger) Printf(fmtString string, args ...interface{}) {
 	if l.Out == nil {
 		fmt.Println(fmt.Sprintf(fmtString, args...))
 		return
@@ -184,6 +184,7 @@ func (v Verifier) ReportCoverage(
 
 		ok, err := v.VerifyCoverage(cfgPkg, pc)
 		if err != nil {
+			log.Debug(err)
 			return nil, err
 		}
 

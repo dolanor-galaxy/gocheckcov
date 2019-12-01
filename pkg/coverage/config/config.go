@@ -14,6 +14,41 @@
 
 package config
 
+import (
+	"io/ioutil"
+	"os"
+)
+
+const (
+	defaultConfigPath = ".gocheckcov-config.yml"
+)
+
+func GetConfigFile(configPath string) ([]byte, error) {
+	var cfContent []byte
+
+	if configPath == "" {
+		configPath = defaultConfigPath
+	}
+
+	_, err := os.Stat(configPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+
+		if configPath != defaultConfigPath {
+			return nil, err
+		}
+	} else {
+		cfContent, err = ioutil.ReadFile(configPath)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return cfContent, nil
+}
+
 type ConfigFile struct {
 	MinCoveragePercentage float64         `yaml:"min_coverage_percentage"`
 	Packages              []ConfigPackage `yaml:"packages"`
