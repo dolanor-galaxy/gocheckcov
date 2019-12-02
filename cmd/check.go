@@ -15,11 +15,17 @@
 package cmd
 
 import (
+	"bufio"
+	"fmt"
 	"go/build"
 	"go/token"
+	"io"
+	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 
@@ -55,18 +61,32 @@ func runCheckCommand(args []string) error {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	srcPath := files.SetSrcPath(args)
-
 	ignoreDirs := strings.Split(skipDirs, ",")
+	srcPath := files.SetSrcPath(args)
 	dir := srcPath
-	projectFiles, err := files.FilesForPath(dir, ignoreDirs)
 
+	projectFiles, err := files.FilesForPath(dir, ignoreDirs)
 	if err != nil {
 		log.Printf("could not retrieve project files from path %v %v", dir, err)
 		return err
 	}
 
 	profilePath := ProfileFile
+	if profilePath == "" {
+		pf, e := runTestsAndGenerateProfile(srcPath)
+		if e != nil {
+			return e
+		}
+
+		profilePath = pf.Name()
+
+		defer func() {
+			if e := os.Remove(pf.Name()); e != nil {
+				log.Print(e)
+			}
+		}()
+	}
+
 	fset := token.NewFileSet()
 	goSrc := filepath.Join(build.Default.GOPATH, "src")
 
@@ -76,13 +96,9 @@ func runCheckCommand(args []string) error {
 		return err
 	}
 
-	var cfContent []byte
-	if !noConfig {
-		cfContent, err = config.GetConfigFile(configFile)
-		if err != nil {
-			log.Debug(err)
-			return err
-		}
+	cfContent, err := getConfig()
+	if err != nil {
+		return err
 	}
 
 	cliL := reporter.NewCliTabLogger()
@@ -147,9 +163,82 @@ func init() {
 	)
 
 	checkCmd.PersistentFlags().StringVarP(&ProfileFile, "profile-file", "p", "", "path to coverage profile file")
+}
 
-	if err := checkCmd.MarkPersistentFlagRequired("profile-file"); err != nil {
-		log.Print(err)
-		os.Exit(1)
+func getConfig() ([]byte, error) {
+	var cfContent []byte
+
+	var err error
+
+	if !noConfig {
+		cfContent, err = config.GetConfigFile(configFile)
+		if err != nil {
+			log.Debug(err)
+			return nil, err
+		}
+	}
+
+	return cfContent, nil
+}
+
+func runTestsAndGenerateProfile(srcPath string) (*os.File, error) {
+	f, err := ioutil.TempFile("", "profile.out")
+	if err != nil {
+		return nil, err
+	}
+
+	args := []string{
+		"test",
+		"-coverprofile=" + f.Name(),
+	}
+
+	absPath, err := filepath.Abs(srcPath)
+	if err != nil {
+		return nil, err
+	}
+
+	goSrcPath := filepath.Join(build.Default.GOPATH, "src")
+	pkgPath := strings.TrimPrefix(strings.TrimPrefix(absPath, goSrcPath), "/")
+	args = append(args, pkgPath)
+	c := exec.Command("go", args...)
+
+	stderr, err := c.StderrPipe()
+	if err != nil {
+		return nil, err
+	}
+
+	stdout, err := c.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := c.Start(); err != nil {
+		return nil, err
+	}
+
+	var wg sync.WaitGroup
+
+	wg.Add(2)
+
+	go scan(&wg, stderr)
+
+	go scan(&wg, stdout)
+
+	if err := c.Wait(); err != nil {
+		return nil, err
+	}
+
+	wg.Wait()
+
+	return f, nil
+}
+
+func scan(wg *sync.WaitGroup, r io.ReadCloser) {
+	defer wg.Done()
+
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := scanner.Text()
+		fmt.Println(line)
 	}
 }
