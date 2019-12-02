@@ -84,4 +84,8 @@ var checkInitCmd = &cobra.Command{
 
 func init() {
 	checkCmd.AddCommand(checkInitCmd)
+
+	checkInitCmd.Flags().StringVarP(&ProfileFile, "profile-file", "p", "", "path to coverage profile file")
+
+	checkInitCmd.MarkFlagRequired("profile-file")
 }

@@ -146,6 +146,8 @@ func init() {
 		"minimum coverage percentage to enforce for all packages (defaults to 0)",
 	)
 
+	checkCmd.Flags().StringVarP(&ProfileFile, "profile-file", "p", "", "path to coverage profile file")
+
 	checkCmd.Flags().StringVarP(
 		&configFile,
 		"config-file",
@@ -161,8 +163,6 @@ func init() {
 		"vendor",
 		"command separted list of directories to skip when reporting coverage",
 	)
-
-	checkCmd.PersistentFlags().StringVarP(&ProfileFile, "profile-file", "p", "", "path to coverage profile file")
 }
 
 func getConfig() ([]byte, error) {
