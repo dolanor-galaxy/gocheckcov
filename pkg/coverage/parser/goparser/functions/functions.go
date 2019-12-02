@@ -14,6 +14,8 @@
 
 package functions
 
+import "github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser/statements"
+
 type Function struct {
 	Name        string
 	SrcPath     string
@@ -23,4 +25,5 @@ type Function struct {
 	EndOffset   int
 	EndLine     int
 	EndCol      int
+	Statements  []statements.Statement
 }

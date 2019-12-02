@@ -18,6 +18,7 @@ import (
 	"go/ast"
 	"go/token"
 
+	"github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser/statements"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -45,6 +46,33 @@ func CollectFunctions(f *ast.File, fset *token.FileSet, filePath string) ([]Func
 				StartOffset: start.Offset,
 				EndOffset:   end.Offset,
 			}
+
+			sc := &statements.StmtCollector{}
+			if err := sc.Collect(x.Body, fset); err != nil {
+				return nil, err
+			}
+
+			stmts := sc.Statements
+			log.Debugf("statements for function %v %v", f.Name, stmts)
+			convertedStmts := make([]statements.Statement, 0, len(stmts))
+
+			for _, stmnt := range stmts {
+				start := fset.Position(stmnt.Pos())
+				end := fset.Position(stmnt.End())
+				startLine := start.Line
+				startCol := start.Column
+				endLine := end.Line
+				endCol := end.Column
+				s := statements.Statement{
+					StartLine: int64(startLine),
+					StartCol:  int64(startCol),
+					EndLine:   int64(endLine),
+					EndCol:    int64(endCol),
+				}
+				convertedStmts = append(convertedStmts, s)
+			}
+
+			f.Statements = convertedStmts
 			functions = append(functions, f)
 		}
 	}

@@ -62,3 +62,67 @@ func Meow(x, y int) bool {
 	g.Expect(funcs).ToNot(BeNil())
 	g.Expect(funcs).To(HaveLen(1))
 }
+
+//func MatchFunc(expected Function) types.GomegaMatcher {
+//  return &funcMatcher{
+//    expected: expected,
+//  }
+//}
+
+//type funcMatcher struct {
+//  expected Function
+//}
+
+//func (f *funcMatcher) Match(actual interface{}) (success bool, err error) {
+//  switch x := actual.(type) {
+//  case Function:
+
+//    if x.Name != f.expected.Name {
+//      return false, nil
+//    }
+
+//    if x.SrcPath != f.expected.SrcPath {
+//      return false, nil
+//    }
+
+//    if x.StartOffset != f.expected.StartOffset {
+//      return false, nil
+//    }
+
+//    if x.StartCol != f.expected.StartCol {
+//      return false, nil
+//    }
+
+//    if x.StartLine != f.expected.StartLine {
+//      return false, nil
+//    }
+
+//    if x.EndOffset != f.expected.EndOffset {
+//      return false, nil
+//    }
+
+//    if x.EndCol != f.expected.EndCol {
+//      return false, nil
+//    }
+
+//    if x.EndLine != f.expected.EndLine {
+//      return false, nil
+//    }
+
+//    if len(x.Statements) != len(f.expected.Statements) {
+//      return false, nil
+//    }
+
+//    return true, nil
+//  default:
+//    return false, fmt.Errorf("actual must be of type Function")
+//  }
+//}
+
+//func (f *funcMatcher) FailureMessage(actual interface{}) (message string) {
+//  return fmt.Sprintf("expected %v to equal %v", f.expected, actual)
+//}
+
+//func (f *funcMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+//  return fmt.Sprintf("expected %v to not equal %v", f.expected, actual)
+//}

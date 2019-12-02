@@ -19,6 +19,7 @@ import (
 
 	"github.com/cvgw/gocheckcov/pkg/coverage/parser/goparser/functions"
 
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/tools/cover"
 )
 
@@ -50,18 +51,18 @@ func (p Parser) RecordFunctionCoverage(functions []functions.Function) []Functio
 			fc.Profile = p.Profile
 		}
 
-		//if int(fc.StatementCount) != len(function.Statements) {
-		//  log.Debugf(
-		//    "function %v statement counts don't match Profile: %v AST: %v",
-		//    function.Name,
-		//    fc.StatementCount,
-		//    len(function.Statements),
-		//  )
+		if int(fc.StatementCount) != len(function.Statements) {
+			log.Debugf(
+				"function %v statement counts don't match Profile: %v AST: %v",
+				function.Name,
+				fc.StatementCount,
+				len(function.Statements),
+			)
 
-		//  if int(fc.StatementCount) == 0 && len(function.Statements) > 0 {
-		//    fc.StatementCount = int64(len(function.Statements))
-		//  }
-		//}
+			if int(fc.StatementCount) == 0 && len(function.Statements) > 0 {
+				fc.StatementCount = int64(len(function.Statements))
+			}
+		}
 
 		out = append(out, fc)
 	}
