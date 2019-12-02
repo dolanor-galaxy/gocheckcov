@@ -87,5 +87,8 @@ func init() {
 
 	checkInitCmd.Flags().StringVarP(&ProfileFile, "profile-file", "p", "", "path to coverage profile file")
 
-	checkInitCmd.MarkFlagRequired("profile-file")
+	if err := checkInitCmd.MarkFlagRequired("profile-file"); err != nil {
+		log.Print(err)
+		os.Exit(1)
+	}
 }

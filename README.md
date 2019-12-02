@@ -4,6 +4,8 @@
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/cvgw/gocheckcov?style=plastic)
 [![license](https://img.shields.io/github/license/cvgw/gocheckcov?style=plastic)](./LICENSE)
 
+[![asciicast](https://asciinema.org/a/GpOwjIQUFxTq2lr9m5HDsQ7E3.svg)](https://asciinema.org/a/GpOwjIQUFxTq2lr9m5HDsQ7E3)
+
 * [Status](#status)
 * [Description](#description)
 * [Getting Started](#getting-started)
