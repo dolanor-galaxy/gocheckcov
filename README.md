@@ -81,8 +81,6 @@ $ gocheckcov check
 ```
 If all packages do not meet the specifed minimum coverage percentage gocheckcov will return exit code 1.
 
-`coverprofile_path` is the path to the file output from `go test -coverprofile=`.
-
 gocheckcov will search for a configuration file `.gocheckcov-config.yml` at the current working directory.
 
 You can also specify the path to a configuration file using the `--config-file` option.
